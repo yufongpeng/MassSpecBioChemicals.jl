@@ -76,9 +76,9 @@ const CLASS_STRUCT = Dict{String, Function}(
     "NAE"   => class_struct_NAE,
     "NAT"   => class_struct_NAT,
     [string("NA", x) => class_struct_NAAA for x in NAAA]...,
-    "WE"    =>class_struct_WE, 
-    "NA"    =>class_struct_NA, 
-    "FAHFA"    =>class_struct_FAHFA, 
+    "WE"    => class_struct_WE, 
+    "NA"    => class_struct_NA, 
+    "FAHFA"    => class_struct_FAHFA, 
 
     "MG"    => class_struct_MG,
     "DG"    => class_struct_DG,

@@ -1,10 +1,10 @@
 module Proteins
 using Reexport
-@reexport using ..MassSpecBioChemicals
+using ..MassSpecBioChemicals
 using ..MassSpecBioChemicals: lk
 using MassSpecChemicals: AbstractChemical
-import ..MassSpecBioChemicals: originalmolecule, leavinggroup, conjugation, ischainedchemical, dehydroxyposition, dehydrogenposition
-import MassSpecChemicals: chemicalname, chemicalformula, chemicalabbr, repr_smiles
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, ischainedchemical, dehydroxyposition, dehydrogenposition
+import MassSpecChemicals: getchemicalattr
 export AbstractPeptide,
         αAminoAcid, 
        Alanine,  

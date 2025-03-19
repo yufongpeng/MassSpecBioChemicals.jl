@@ -1,11 +1,11 @@
 using MassSpecChemicals
-using MassSpecChemicals.BioChemicals
-using MassSpecChemicals.BioChemicals.Lipids
-const MBL = MassSpecChemicals.BioChemicals.Lipids
+using MassSpecBioChemicals
+using MassSpecBioChemicals.Lipids
+const MBL = MassSpecBioChemicals.Lipids
 using Pkg
 Pkg.activate("test")
 using JSON3
-@activate ..
+Pkg.activate(".")
 
 lpc = "LPC 36:1;O2"
 lpc = "LPC 18:1(2);OH"
@@ -14,7 +14,7 @@ s = "MIPC(1) 18:1(4E);3OH/18:0"
 s = "GM3(1) 18:1(4E);3OH/18:0"
 
 lipid = MBL.parse_lipid(s)
-MBL.repr_smiles_carbonchain(lipid)
+chemicalsmiles(lipid; onlycarbonchain = true)
 
 test_lipid_js = JSON3.read(joinpath("test", "data", "test_lipid.json"))
 test_lipid = Dict{UnionAll, Dict}()

@@ -7,20 +7,20 @@
 abstract type LipidDataBase end
 abstract type LIPIDMAPS <: LipidDataBase end
 struct LMSD <: LIPIDMAPS 
-    records::Dict{String, String}
+    records::Dict{String, Vector{String}}
 end
-struct LipidDataBaseObject{L}
-    database::LipidDatabase{L}
+struct LipidDataBaseObject{L <: LipidDataBase}
+    database::L
     id::Int
 end
 
-function init_lipiddatabase!(::Type{LMSD})
-    if to_update_LMSD()
+function init_lipiddatabase!(::Type{LMSD}; period = Dates.Month(0))
+    if to_update_LMSD(period)
         data = take!(Downloads.download("https://www.lipidmaps.org/files/?file=LMSD&ext=sdf.zip", IOBuffer()))
         # write sdf 
         write(joinpath(@__DIR__(), "database", "LMSD.sdf.zip"), data)  
         open(joinpath(@__DIR__(), "database", "status.txt"), "a") do f 
-            write(f, "\n", "LMSD\t", Dates.now())
+            write(f, "\n", "LMSD\t", string(Dates.now()))
         end
     else
         data = read(joinpath(@__DIR__(), "database", "LMSD.sdf.zip"))
@@ -59,59 +59,31 @@ function init_lipiddatabase!(::Type{LMSD})
             mols[k][i] = v 
         end
     end
-    # sdfs = map(read_sdf_prop, sdfs)
-    # mols = Dict(k => get.(sdfs, Ref(k), "") for k in [
-    #         "LM_ID", 
-    #         "NAME", 
-    #         "SYSTEMATIC_NAME", 
-    #         "SYNONYMS", 
-    #         "CATEGORY", 
-    #         "MAIN_CLASS", 
-    #         "SUB_CLASS", 
-    #         "CLASS_LEVEL4", 
-    #         "EXACT_MASS", 
-    #         "FORMULA", 
-    #         "INCHI_KEY", 
-    #         "INCHI", 
-    #         "SMILES", 
-    #         "ABBREVIATION", 
-    #         "PUBCHEM_CID", 
-    #         "HMDB_ID", 
-    #         "KEGG_ID", 
-    #         "CHEBI_ID", 
-    #         "LIPIDBANK_ID", 
-    #         "PLANTFA_ID", 
-    #         "SWISSLIPIDS_ID"
-    #     ]
-    # )
-    # push!(mols, "SDF" => sdf)
-    # mols = [sdftomol(IOBuffer(x)) for x in filter!(!isempty, split(sdfs, "\$\$\$\$\n"))]
     LMSD(mols)
 end
 
-# function read_sdf_prop(m)
-#     Dict{String, String}(eachmatch(r"> <([^>]*)>\n(.*)", m))
-# end
-
-function to_update_LMSD()
+function to_update_LMSD(period::DatePeriod)
     mkpath(joinpath(@__DIR__(), "database"))
     dir = readdir(joinpath(@__DIR__(), "database"))
     "status.txt" in dir || return true
     st = readlines(joinpath(@__DIR__(), "database", "status.txt"))
     i = findlast(x -> startswith(x, "LMSD\t"), st)
-    return isnothing(i) || begin
+    isnothing(i) && return true 
+    ld = Dates.DateTime(last(split(st[i], "\t")), dateformat"yyyy-mm-dd\THH:MM:SS.s")
+    if Dates.now() > ld + period 
         Dates.DateTime(
             first(match(
                 r"LMSD (\d\d\d\d-\d\d-\d\d)", 
                 String(take!(Downloads.download("https://www.lipidmaps.org/databases/lmsd/download", IOBuffer())))
             )), dateformat"yyyy-mm-dd\THH:MM:SS.s"
-        ) > Dates.DateTime(last(split(st[i], "\t")), dateformat"yyyy-mm-dd\THH:MM:SS.s")
+        ) > ld
+    else 
+        false
     end
 end
 
-const DATABASE_LMSD = init_lipiddatabase!(LMSD)
+const DATABASE_LMSD = init_lipiddatabase!(LMSD; period = Dates.Month(1))
 
-const DATABASE_LIPID = Dict{String, LipidDatabase}(
+const DATABASE_LIPID = Dict{String, LipidDataBase}(
     "LMSD" => DATABASE_LMSD
 )
-

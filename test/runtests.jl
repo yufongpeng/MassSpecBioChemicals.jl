@@ -1,13 +1,12 @@
 using MassSpecBioChemicals
 using MassSpecBioChemicals.Lipids
-const BCL = MassSpecBioChemicals.Lipids
+const MBL = MassSpecBioChemicals.Lipids
 using Test, JSON3
 
 function test_annotationlevel(x)
-    tal = BCL.annotationlevel(x.object; partial = true, additional = true, pass = true)
+    tal = MBL.annotationlevel(x.object; partial = true, additional = true, pass = true)
     length(tal) == length(x.annotationlevel) && all(t -> in(t, x.annotationlevel), tal)
 end
-
 
 @testset "MassSpecBioChemicals.jl" begin
     @testset "MassSpecBioChemicals.Lipids" begin
@@ -16,11 +15,11 @@ end
         @testset "io" begin
             global test_lipid = Dict{UnionAll, Dict}()
             for (c, s) in test_lipid_js
-                @testset string(c) begin
+                @testset "$c" begin
                     dict = Dict{String, Any}()
                     for (l, a) in s
                         l = string(l)
-                        lipid = BCL.parse_lipid(l)
+                        lipid = MBL.parse_lipid(l)
                         show(lipid)
                         print(", ")
                         push!(dict, l => (object = lipid, annotationlevel = [eval(Meta.parse(aa)) for aa in a]))
@@ -29,8 +28,12 @@ end
                 end
             end
         end
+        println()
         @testset "annotationlevel" begin
-            
+            @test all(test_annotationlevel(x) for (k, x) in test_lipid[FattyAcyl])
+            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Glycerolipid])
+            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Glycerophospholipid])
+            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Sphingolipid])
         end
     end
 end

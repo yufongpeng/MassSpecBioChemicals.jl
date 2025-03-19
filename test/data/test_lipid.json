@@ -206,7 +206,7 @@
         "SPBP(1) 18:1(4E);3OH":["fullstructurelevel"],
         "SPBP 18:2;O2":["passsnpositionlevel", "passphosphatepositionlevel"],
         "SPBP(1,3) 18:1;OH":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel"],
-        "SPBP(1,3) 18:1;4OH":["passsnpositionlevel", "passphosphatepositionlevel", "structurepositionlevel"],
+        "SPBP(1,3) 18:1;4OH":["passsnpositionlevel", "structurepositionlevel"],
         "SPBP 18:2;O":["passsnpositionlevel", "passphosphatepositionlevel"],
         "SPBP(1,3) 18:1":["passsnpositionlevel", "structurepositionlevel"],
         "Cer 42:2;O2":["passphosphatepositionlevel"],
@@ -215,9 +215,9 @@
         "Cer 18:1;(OH)2/24:1":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel"],
         "Cer 18:1(4E);1OH,3OH/24:1(18Z)":["fullstructurelevel"],
         "HexCer 18:1;O2/24:1":["passsnpositionlevel", "passphosphatepositionlevel"],
-        "Hex2Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel"],
-        "HexNAcHex3Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel"],
-        "GlcNAcGlcGal2Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel"],
+        "Hex2Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "dbconfiglevel", "structuredefinedlevel"],
+        "HexNAcHex3Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "dbconfiglevel", "structuredefinedlevel"],
+        "GlcNAcGlcGal2Cer 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "dbconfiglevel", "structuredefinedlevel"],
         "CerP(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurelevel"],
         "LEPC(1) 18:1(4E);3OH":["fullstructurelevel"],
         "EPC(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurelevel"],
@@ -300,7 +300,6 @@
         "SM1a(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurelevel"],
         "SM1b(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurelevel"],
         "SM1(1) 18:1(4E);3OH/24:1(18Z)":["passsnpositionlevel", "passphosphatepositionlevel", "structuredefinedlevel", "dbconfiglevel"],
-        "SB1a(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurel0evel"]
+        "SB1a(1) 18:1(4E);3OH/24:1(18Z)":["fullstructurelevel"]
     }
 }
-

@@ -45,45 +45,50 @@ const SNFG_SUB = Dict{String, FunctionalGroup}(
     "Tau"   => Tauryl()
 )
 
+"""
+    snfg_abbr(x)
+
+SNFG abbreviation
+"""
+snfg_abbr(x) = chemicalabbr(x)
 for x in SNFG_AA
     T = typeof(parse_aa_fg(x))
     @eval snfg_abbr(aa::$T) = letter3_abbr(originalmolecule(aa))
 end
-snfg_abbr(x) = chemicalabbr(x)
 snfg_abbr(x::Amino) = "N"
 
 const MONO_STRUCT = Dict{String, Type{<: Monosaccharide}}(
-    "Hex"   => Hex,
-    "Glc"   => Glc,
-    "Gal"   => Gal,
-    "Man"   => Man,
-    "dHex"  => dHex,
-    "Fuc"   => Fuc,
-    "HexN"  => HexN,
-    "GlcN"  => GlcN,
-    "GalN"  => GalN,
-    "ManN"  => ManN,
-    "HexNAc"    => HexNAc,
-    "GlcNAc"    => GlcNAc,
-    "GalNAc"    => GalNAc,
-    "ManNAc"    => ManNAc,
-    "HexA"  => HexA,
-    "GlcA"  => GlcA,
-    "GalA"  => GalA,
-    "ManA"  => ManA,
-    "Neu"   => Neu,
-    "Neu5Ac"    => Neu5Ac,
-    "NeuAc"     => NeuAc,
-    "Neu5Gc"    => Neu5Gc,
-    "NeuGc"     => NeuGc,
-    "Kdb"   => Kdb,
-    "Pen"   => Pen,
-    "Rib"   => Rib,
-    "Ara"   => Ara,
-    "Xyl"   => Xyl,
-    "dPen"  => dPen,
-    "dRib"  => dRib,
-    "Ino"  => Ino,
+    "Hex"   => Hexose,
+    "Glc"   => Glucose,
+    "Gal"   => Galactose,
+    "Man"   => Mannose,
+    "dHex"  => Deoxyhexose,
+    "Fuc"   => Fucose,
+    "HexN"  => Hexosamine,
+    "GlcN"  => Glucosamine,
+    "GalN"  => Galactosamine,
+    "ManN"  => Mannosamine,
+    "HexNAc"    => Nacetylhexosamine,
+    "GlcNAc"    => Nacetylgluosamine,
+    "GalNAc"    => Nacetylgalactosamine,
+    "ManNAc"    => Nacetylmannosamine,
+    "HexA"  => HexuronicAcid,
+    "GlcA"  => GlucuronicAcid,
+    "GalA"  => GalacturonicAcid,
+    "ManA"  => MannuronicAcid,
+    "Neu"   => NeuraminicAcid,
+    "Neu5Ac"    => NacetylneuraminicAcid,
+    "NeuAc"     => NacetylneuraminicAcid,
+    "Neu5Gc"    => NglycolylneuraminicAcid,
+    "NeuGc"     => NglycolylneuraminicAcid,
+    "Kdn"   => Kdn,
+    "Pen"   => Pentose,
+    "Rib"   => Ribose,
+    "Ara"   => Arabinose,
+    "Xyl"   => Xylose,
+    "dPen"  => Deoxypentose,
+    "dRib"  => Deoxyribose,
+    "Ino"  => Inositol,
     "Sulfoquinovose"    => Sulfoquinovose
 )
 
@@ -98,7 +103,7 @@ function push_new_glycan!(cs, ls, x, c, d)
     push!(ls, lf => rt)
     isempty(mj)
 end
-parse_chemical(::Type{<: Saccharide}, x) = parse_glycan(x)
+
 function parse_glycan(s::AbstractString)
     p = 1
     cs = Saccharide[]
@@ -225,13 +230,8 @@ function get_monosaccharide(x)
     parse_monosaccharide(first(match(r"^\[?(.*?)\]?$", m)))
 end
 
-repr_linkage(l::Anomerposition) = l.position > 0 ? string(Int(l.position)) : ""
-repr_linkage(l::Alphaposition) = l.position > 0 ? string("α", Int(l.position)) : "α"
-repr_linkage(l::Betaposition) = l.position > 0 ? string("β", Int(l.position)) : "β"
-
-function chemicalname(mono::T) where {T <: Monosaccharide}
-    head = string(T.name.name)
-    isnothing(mono.substituent) && return head 
+function add_sub(mono::T, head) where {T <: Monosaccharide}
+    (isnothing(mono.substituent) || isempty(mono.substituent)) && return head
     if mono.substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
         string(head, join([n == 1 ? string("?", snfg_abbr(m)) : string("?(", snfg_abbr(m), Int(n), ")") for (m, n) in mono.substituent], ""))
     else
@@ -254,88 +254,36 @@ function chemicalname(mono::T) where {T <: Monosaccharide}
         string(head, ps)
     end
 end
-chemicalname(::GM4) = "GM4"
-chemicalname(::SM4) = "SM4"
-chemicalname(::Lac) = "Lac"
-chemicalname(::T) where {T <: Ganglioseries} = string(T)
-chemicalname(::T) where {T <: Globoseries} = string(T)
-chemicalname(::T) where {T <: Isogloboseries} = string(T)
-chemicalname(::T) where {T <: Lactoseries} = string(T)
-chemicalname(x::SM1) = isomername(x, "SM1", 2)
-chemicalname(x::GM1) = isomername(x, "GM1", 3)
-chemicalname(x::GD1) = isomername(x, "GD1", 5)
-chemicalname(x::GT1) = isomername(x, "GT1", 5)
-chemicalname(x::GQ1) = isomername(x, "GQ1", 4)
-chemicalname(x::GP1) = isomername(x, "GP1", 2)
-function isomername(x, c, n)
-    if length(x.isomer) >= n
+
+function add_name(mono::T, head) where {T <: Monosaccharide}
+    (isnothing(mono.substituent) || isempty(mono.substituent)) && return head
+    if mono.substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
+        string(join([n == 1 ? string("?", chemicalname(m)) : string("?(", chemicalname(m), Int(n), ")") for (m, n) in mono.substituent], "-"), "-", string(T.name.name))
+    else
+        ps = ""
+        pp = String[]
+        lm = nothing 
+        for (p, m) in mono.substituent
+            if isnothing(lm)
+                lm = m
+                push!(pp, p == 0 ? "?" : string(Int(p)))
+            elseif m == lm
+                push!(pp, p == 0 ? "?" : string(Int(p)))
+            else
+                ps = string(ps, join(pp, ","), chemicalname(lm), "-")
+                lm = m 
+                pp = String[p == 0 ? "?" : string(Int(p))]
+            end
+        end
+        ps = string(ps, join(pp, ","), chemicalname(lm), "-")
+        string(ps, head)
+    end
+end
+
+function isomername(isomer, c, n)
+    if length(isomer) >= n
         c
     else
-        string(c, "?(", join([replace(chemicalname(i), c => "") for i in x.isomer], ","), ")")
+        string(c, "?(", join([replace(i, c => "") for i in isomer], ","), ")")
     end
-end
-chemicalname(glycan::GlyComp) = join(map(glycan.comp) do (x, n)
-    c = chemicalname(x)
-    if n > 1
-        if endswith(c, r"\d")
-            c = string("(", c, ")", Int(n))
-        else
-            c = string(c, Int(n))
-        end
-    elseif endswith(c, r"\d")
-        c = string("(", c, ")")
-    end
-    c
-end, "")
-
-function chemicalname(glycan::Glycan)
-    s = ""
-    for (i, x) in enumerate(glycan.linkage)
-        c = glycan.chain[i]
-        xs = repr_linkage(x)
-        cs = chemicalname(c)
-        if c isa Glycan
-            m = match(r"\(?((?:\(a)?(?:\(b)?[αβ]?)(\d*)-(\d*)\)?$", cs)
-            sp, si, sj = m
-            mp, mi, mj = match(r"([αβab]*)(\d*)-(\d*)$", xs)
-            if isempty(sp)
-                sp = mp
-            end
-            if isempty(si)
-                si = mi
-            end
-            if isempty(mj)
-                mj = sj
-            end
-            x = string(sp, si, "-", mj)
-            if startswith(x, "-") || startswith(x, "α") || startswith(x, "β")
-                s = string(s, "[", cs[begin:m.match.offset], sp, si, "-", mj, "]")
-            else
-                s = string(s, "[", cs[begin:m.match.offset], "(", sp, si, "-", mj, ")]")
-            end
-        else
-            if startswith(xs, "-") || startswith(xs, "α") || startswith(xs, "β")
-                s = string(s, cs, xs)
-            else
-                s = string(s, cs, "(", xs, ")")
-            end
-        end
-    end
-    if length(glycan.linkage) == length(glycan.chain) - 1
-        s = string(s, chemicalname(last(glycan.chain)))
-    end
-    s
-end
-
-# specify num -> num
-# default 6 -> 1 === dehydrogen -> dehydroxy 
-# other than 6, => reverse smiles of sub
-function repr_smiles(sugar::Hex)
-    isnothing(sugar.substituent) && return "OC{6}C{5}(O1)C{4}(O)C{3}(O)C{2}(O)C{1}1O"
-end
-function repr_smiles(sugar::Glc)
-    isnothing(sugar.substituent) && return "OC{6}[C{5}@@H](O1)[C{4}@@H](O)[C{3}@H](O)[C{2}@@H](O)[C{1}H]1O"
-end
-function repr_smiles(sugar::Gal)
-    isnothing(sugar.substituent) && return "OC{6}[C{5}@@H](O1)[C{4}@H](O)[C{3}@H](O)[C{2}@@H](O)[C{1}H]1O"
 end

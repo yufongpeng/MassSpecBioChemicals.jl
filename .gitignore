@@ -2,4 +2,4 @@
 *.jl.cov
 *.jl.mem
 /Manifest.toml
-/src/lipid/database/LMSD.sdf.zip
+/src/lipid/database

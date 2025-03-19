@@ -1,78 +1,3 @@
-chainposition(::Type{<: Hydrocarbon}) = ["hydrocarbon"]
-chainposition(::Type{<: FattyAcid}) = ["acid"]
-chainposition(::Type{<: FattyAlcohol}) = ["alcohol"]
-chainposition(::Type{<: FattyAldehyde}) = ["acyl"]
-chainposition(::Type{<: FattyAmide}) = ["nacyl"]
-chainposition(::Type{<: FattyAmine}) = ["amine"]
-chainposition(::Type{<: FattyAcylCarnitine}) = ["oacyl"]
-chainposition(::Type{<: FattyAcylCoA}) = ["sacyl"]
-chainposition(::Type{<: NacylAmine}) = ["amine", "nacyl"]
-chainposition(::Type{<: FattyAcylEster}) = ["alcohol", "oacyl"]
-chainposition(::Type{<: WaxEster}) = ["alcohol", "oacyl"]
-chainposition(::Type{<: Glycerophospholipid}) = ["sn-1", "sn-2"]
-chainposition(::Type{<: Sphingolipid}) = ["lcb", "nacyl"]
-chainposition(::Type{<: Sphingolipid{H, <: CarbonChain{SPB}}}) where H = ["lcb"]
-chainposition(::Type{<: Glycerolipid}) = ["sn-1", "sn-2", "sn-3"]
-chainposition(::Type{<: Omodifiedradylglycerol}) = ["sn-1", "sn-2"]
-chainposition(::Type{<: Bisradylglycerophosphoglycerol}) = ["sn-1", "sn-2", "sn-1'", "sn-2'"]
-chainposition(::Type{<: Bisradylglycerophosphate}) = ["sn-2", "sn-3", "sn-2'", "sn-3'"]
-chainposition(lipid::T) where {T <: Lipid} = chainposition(T)
-nchainposition(::Type{T}) where {T <: Lipid} = length(chainposition(T))
-nchainposition(lipid::T) where {T <: Lipid} = length(chainposition(T))
-ncarbonchain(lipid::Lipid) = ncarbonchain(lipid.chain)
-ncarbonchain(chains::Tuple) = sum(ncarbonchain, chains)
-ncarbonchain(::CarbonChain{<: CarbonChainType}) = 1
-ncarbonchain(::CarbonChain{<: T}) where {T <: Tuple} = length(T.parameters)
-ncarbon(chains::Tuple) = sum(ncarbon, chains)
-ncarbon(chain::CarbonChain) = chain.carbon
-ndoublebond(chain::CarbonChain{S, UInt8}) where S = Int(chain.doublebond)
-ndoublebond(chain::CarbonChain{S}) where S = length(chain.doublebond)
-
-hascycloheadgroup(::Lipid) = false
-hascycloheadgroup(::Sphingolipid) = false
-hascycloheadgroup(::CeramidePhosphate) = true
-hascycloheadgroup(::SphingoidBasePhosphate) = true
-
-getlipidchain(lipid::Lipid) = tuplize(lipid.chain)
-getlipidbody(lipid::Lipid) = tuplize(lipid.backbone)
-getlipidbody(lipid::Sphingolipid) = tuplize(lipid.headgroup)
-
-dehydroxyposition(::FattyAcid) = nothing
-dehydrogenposition(::FattyAcid) = missing
-dehydroxyposition(::FattyAlcohol) = nothing
-dehydrogenposition(::FattyAlcohol) = nothing
-dehydroxyposition(::FattyAmine) = nothing
-dehydrogenposition(::FattyAmine) = nothing
-# 5 isspecieslevel
-# 3/4 isphosphatepositionlevel
-# 4 ismolecularspecieslevel
-# 3 issnpositionlevel
-# 3 isdbpositionlevel
-# 3 isstructuredefinedlevel
-# 2 isfullstructurelevel
-# 1 iscompletestructurelevel
-
-# levels are positive listed, not listed => not in the level
-
-# @enum Level begin
-#     completestructurelevel
-#     structureconfiglevel
-#     fullstructurelevel
-#     structureconfigpartiallevel
-#     structurepositionlevel
-#     structurepositionpartiallevel
-#     structuredefinedlevel
-#     structuredefinedpartiallevel
-#     dbconfiglevel
-#     dbconfigpartiallevel
-#     dbpositionlevel
-#     dbpositionpartiallevel
-#     snpositionlevel
-#     phosphatepositionlevel
-#     molecularspecieslevel
-#     specieslevel
-# end
-
 abstract type LipidAnnotationLevel end
 struct AnnotationLevel <: LipidAnnotationLevel
     level::UInt8
@@ -292,7 +217,7 @@ function annotationchain(chain::CarbonChain)
         checksub = true
         for (p, m) in sub
             if checksub || checkdb
-                il = annotationchain(originalmolecule(m))
+                il = annotationchain(parentchemical(m))
             else
                 break 
             end
@@ -317,7 +242,7 @@ function annotationchain(chain::CarbonChain)
         end
         if checksub || checkdb
             for (m, n) in sub
-                il = annotationchain(originalmolecule(m))
+                il = annotationchain(parentchemical(m))
                 checkdb && intersect!(dbs_result, il)
                 checksub && intersect!(sub_result, il)
                 checksub = checksub && length(sub_result) > 0
@@ -427,37 +352,41 @@ annotationchain(c::T) where {S <: Nothing, T <: Monosaccharide{S}} = [
     molecularspecieslevel,
     specieslevel
 ] 
-annotationchain(c::T) where {S <: Vector{<: Pair{<: FunctionalGroup, UInt8}}, T <: Monosaccharide{<: S}} = [
-    structuredefinedlevel,
-    structuredefinedpartiallevel,
-    dbconfiglevel,
-    dbconfigpartiallevel,
-    dbpositionlevel,
-    dbpositionpartiallevel,
-    passsnpositionlevel,
-    snpositionlevel,
-    passphosphatepositionlevel,
-    phosphatepositionlevel,
-    molecularspecieslevel,
-    specieslevel
-]
-function annotationchain(c::T) where {S <: Vector{<: Pair{UInt8, <: FunctionalGroup}}, T <: Monosaccharide{<: S}}
-    if any(x -> first(x) == 0, c.substituent)
+function annotationchain(c::T) where {S <: Vector{<: Pair{<: FunctionalGroup, UInt8}}, T <: Monosaccharide{<: S}}
+    if any(x -> first(x) == Phosphate(), c.substituent)
         [
-            structuredefinedlevel,
-            structuredefinedpartiallevel,
-            dbconfiglevel,
-            dbconfigpartiallevel,
-            dbpositionlevel,
-            dbpositionpartiallevel,
-            passsnpositionlevel,
-            snpositionlevel,
-            passphosphatepositionlevel,
-            phosphatepositionlevel,
-            molecularspecieslevel,
-            specieslevel
-        ]
+        structuredefinedlevel,
+        structuredefinedpartiallevel,
+        dbconfiglevel,
+        dbconfigpartiallevel,
+        dbpositionlevel,
+        dbpositionpartiallevel,
+        passsnpositionlevel,
+        snpositionlevel,
+        molecularspecieslevel,
+        specieslevel
+    ]
     else
+        [
+        structuredefinedlevel,
+        structuredefinedpartiallevel,
+        dbconfiglevel,
+        dbconfigpartiallevel,
+        dbpositionlevel,
+        dbpositionpartiallevel,
+        passsnpositionlevel,
+        snpositionlevel,
+        passphosphatepositionlevel,
+        phosphatepositionlevel,
+        molecularspecieslevel,
+        specieslevel
+    ]
+    end 
+end
+
+function annotationchain(c::T) where {S <: Vector{<: Pair{UInt8, <: FunctionalGroup}}, T <: Monosaccharide{<: S}}
+    i = findall(x -> first(x) == 0, c.substituent)
+    if isempty(i)
         [
             completestructurelevel,
             fullstructurelevel,
@@ -478,6 +407,34 @@ function annotationchain(c::T) where {S <: Vector{<: Pair{UInt8, <: FunctionalGr
             molecularspecieslevel,
             specieslevel
         ] 
+    elseif any(j -> last(c.substituent[j]) == Phsphate(), i)
+        [
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ]
+    else
+        [
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            passphosphatepositionlevel,
+            phosphatepositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ]
     end
 end
 
@@ -608,393 +565,3 @@ function maximal_annotationlevel(level::Vector{T}) where {T <: LipidAnnotationLe
     end
     newlevel
 end
-
-# depre
-#==
-function partialize(level::AnnotationLevel)
-    @match level begin
-        specieslevel                    => specieslevel
-        molecularspecieslevel           => specieslevel
-        phosphatepositionlevel          => specieslevel
-        passphosphatepositionlevel      => specieslevel
-        snpositionlevel                 => molecularspecieslevel
-        passsnpositionlevel             => molecularspecieslevel
-        dbpositionpartiallevel          => dbpositionpartiallevel
-        dbpositionlevel                 => dbpositionpartiallevel
-        dbconfigpartiallevel            => dbconfigpartiallevel
-        dbconfiglevel                   => dbconfigpartiallevel
-        structuredefinedpartiallevel    => structuredefinedpartiallevel # headgroup comp/chain mod comp
-        structuredefinedlevel           => structuredefinedpartiallevel # all comp
-        structurepositionpartiallevel   => structurepositionpartiallevel # headgroup position/chain mod position
-        structurepositionlevel          => structurepositionpartiallevel # all position
-        structureconfigpartiallevel     => structureconfigpartiallevel
-        structureconfiglevel            => structureconfigpartiallevel
-        _                               => throw(ArgumentError("$level cannot be partialized"))
-    end
-end
-
-function maximal_annotationlevel_sorted(level::Vector{AnnotationLevel})
-    newlevel = AnnotationLevel[]
-    for l in level
-        while !isempty(newlevel) && l > last(newlevel)
-            pop!(newlevel)
-        end
-        push!(newlevel, l)
-    end
-    newlevel
-end
-function maximal_annotationlevel(level::Vector{AnnotationLevel})
-    newlevel = AnnotationLevel[]
-    for l in level 
-        if l in newlevel || any(>(l), newlevel)
-            continue
-        else
-            del = findall(<(l), newlevel)
-            deleteat!(newlevel, del)
-            push!(newlevel, l)
-        end
-    end
-    newlevel
-end
-function minimal_annotationlevel(level::Vector{<: LipidAnnotationLevel})
-    newlevel = AnnotationLevel[]
-    pending = AnnotationLevel[]
-    for l in level 
-        if l in newlevel || any(<(l), newlevel)
-            continue
-        elseif l isa LeastLevel
-            i = findall(>(l.level), newlevel)
-            if isnothing(i)
-                push!(newlevel, l.level)
-            else
-                push!(pending, l.level)
-            end
-        else
-            del = findall(>(l), newlevel)
-            deleteat!(newlevel, del)
-            push!(newlevel, l)
-        end
-    end
-    for l in pending
-        if all(!>(l), newlevel)
-            push!(newlevel, l)
-        end
-    end
-    newlevel
-end
-# function contain(l1::AnnotationLevel, l2::AnnotationLevel)
-#     if l1 == completestructurelevel
-#         l2 == fullstructurelevel || l2 == structureconfiglevel || contain(fullstructurelevel, l2)
-#     elseif l1 == fullstructurelevel
-#         l2 == snpositionlevel || l2 == passsnpositionlevel || l2 == structurepositionlevel || l2 == dbconfiglevel
-#     else
-#         false
-#     end
-# end
-
-# # push not exclude highest
-# function push_annotationlevel(level::Vector{AnnotationLevel}, l::AnnotationLevel; highest = l)
-#     if !(highest > l)
-#     elseif any(x -> l > x || contain(x, l), level) 
-#         return level
-#     else
-#         minimal_annotationlevel(vcat(level, l))
-#     end
-# end
-# exact level
-function annotationlevel(lipid::Lipid; partial = false, sublevel = false)
-    # testphosphatepositionlevel
-    pilevel = testphosphatepositionlevel(lipid)
-    any(x -> ncarbonchain(x) > 1, getlipidchain(lipid)) && return sublevel ? [pilevel.level] : [transform_sublevel(pilevel.level)]
-    lb = map(x -> annotationlevel(x; partial = false, sublevel = true), getlipidbody(lipid))
-    lb = unique!(vcat(lb...))
-    # check snpositionlevel
-    snlevel = testsnpositionlevel(lipid)
-    any(==(molecularspecieslevel), lb) && return sublevel ? [snlevel.level] : [transform_sublevel(snlevel.level)]
-    # mix findmin
-    lc = map(x -> annotationlevel(x; partial = true, sublevel = true), getlipidchain(lipid))
-    if !partial
-        lc = map(lc) do l
-            maximal_annotationlevel(transform_partial.(l))
-        end
-    end
-    lc = unique!(vcat(lc...))
-    any(==(molecularspecieslevel), lc) && return sublevel ? [snlevel.level] : [transform_sublevel(snlevel.level)]
-    l = vcat(lc, lb, snlevel, testheadgrouppositionlevel(lipid))
-    result = minimal_annotationlevel(l)
-    # result = push_annotationlevel(result, snlevel; highest = snpositionlevel)
-    # result = push_annotationlevel(result, testheadgrouppositionlevel(lipid); highest = structurepositionlevel)
-    sublevel ? result : maximal_annotationlevel(transform_sublevel.(result))
-end
-
-# assume snpositionlevel/passsnpositionlevel, phosphatepositionlevel/passphosphatepositionlevel 
-function annotationlevel(chain::CarbonChain; partial = false, sublevel = false)
-    # molecularspecieslevel dbpositionlevel dbconfiglevel structuredefinedlevel structurepositionlevel fullstructurelevel
-    # implement structureconfigpartiallevel structureconfiglevel completestructurelevel after R/S available
-    dbs = chain.doublebond
-    if iszero(dbs) 
-        dbs_result = [dbpositionlevel, dbconfiglevel]
-        checkdbs = [true, true]
-    elseif isa(dbs, UInt8) || any(<(0x03), dbs)
-        dbs_result = [molecularspecieslevel]
-        checkdbs = [false]
-    elseif any(x -> iszero(x % 3), dbs)
-        dbs_result = [dbpositionlevel]
-        checkdbs = [true]
-    else
-        dbs_result = [dbpositionlevel, dbconfiglevel]
-        checkdbs = [true, true]
-    end
-
-    checkdbs = dbs_result .> molecularspecieslevel
-    sub = chain.substituent
-    if chain.substituent isa Vector{<: Pair{UInt8, <: AbstractFunctionalGroup}} 
-        sub_result = [structuredefinedlevel, structurepositionlevel]
-        checksub = [true, true]
-        for (p, m) in chain.substituent
-            if any(checksub) || any(checkdbs)
-                il = annotationlevel(originalmolecule(m); partial = false, sublevel = true)
-            else
-                break 
-            end
-            for i in eachindex(sub_result)
-                if checksub[i] && any(<(sub_result[i]), il)
-                    sub_result[i:end] .= partialize.(sub_result[i:end])
-                    checksub[i:end] .= false
-                end
-            end
-            for i in eachindex(dbs_result)
-                if checkdbs[i] && any(<(dbs_result[i]), il)
-                    dbs_result[i:end] .= partialize.(dbs_result[i:end])
-                    checkdbs[i:end] .= false
-                end
-            end
-        end
-    elseif isnothing(sub) || isempty(sub)
-        sub_result = [structurepositionlevel]
-    else
-        if any(x -> first(x) isa UnknownGroup, sub)
-            sub_result = [molecularspecieslevel]
-            checksub = false
-        else
-            sub_result = [structuredefinedlevel]
-            checksub = true
-        end
-        if checksub || any(checkdbs)
-            for (m, n) in chain.substituent
-                il = annotationlevel(originalmolecule(m); partial = false, sublevel = true)
-                if checksub && any(<(structuredefinedlevel), il)
-                    sub_result = [structuredefinedpartiallevel]
-                    checksub = false
-                end
-                for i in eachindex(dbs_result)
-                    if checkdbs[i] && any(<(dbs_result[i]), il)
-                        dbs_result[i:end] .= partialize.(dbs_result[i:end])
-                        checkdbs[i:end] .= false
-                    end
-                end
-            end
-        end
-    end
-    if partial 
-        sub_result = maximal_annotationlevel_sorted(sub_result)
-        dbs_result = maximal_annotationlevel_sorted(dbs_result)
-    else
-        i = findfirst(!ispartial, reverse(sub_result))
-        sub_result = isnothing(i) ? [molecularspecieslevel] : [sub_result[end - i + 1]]
-        i = findfirst(!ispartial, reverse(dbs_result))
-        dbs_result = isnothing(i) ? [molecularspecieslevel] : [dbs_result[end - i + 1]]
-    end
-    (sub_result == [structurepositionlevel] && dbs_result == [dbconfiglevel]) && return [fullstructurelevel] 
-    if !sublevel
-        sub_result = map(transform_sublevel, sub_result)
-        dbs_result = map(transform_sublevel, dbs_result)
-    end
-    maximal_annotationlevel(vcat(sub_result, dbs_result))
-end
-
-function annotationlevel(dc::DehydratedChemical; partial = false, sublevel = true)
-    lv = unique!(vcat(annotationlevel.(getchaincomponent(dc); partial, sublevel)...))
-    for ((a, b), l) in zip(IterTools.partition(getchaincomponent(dc), 2), getchainlinkage(dc))
-        pa = dehydroxyposition(a)
-        pb = dehydrogenposition(b)
-        if !ismissing(pa) && !isnothing(pa)
-            if first(l).position == 0
-                push!(lv, structuredefinedlevel)
-            elseif a isa Saccharide && first(l) isa Linkageposition
-                push!(lv, fullstructurelevel)
-            end
-        end
-        if !ismissing(pb) && !isnothing(pb) && last(l).position == 0
-            push!(lv, structuredefinedlevel)
-        end
-    end
-    unique!(lv)
-    if !sublevel
-        lv = transform_sublevel.(lv)
-    end
-    minimal_annotationlevel(lv)
-end
-function annotationlevel(dc::Glycan; partial = false, sublevel = true)
-    lv = unique!(vcat(annotationlevel.(getchaincomponent(dc))...))
-    for ((a, b), l) in zip(IterTools.partion(getchaincomponent(dc)), getchainlinkage(dc))
-        pa = dehydroxyposition(a)
-        pb = dehydrogenposition(b)
-        if !ismissing(pa) && !isnothing(pa)
-            if first(l).position == 0
-                push!(lv, structuredefinedlevel)
-            elseif first(l) isa Linkageposition
-                push!(lv, fullstructurelevel)
-            end
-        end
-        if !ismissing(pb) && !isnothing(pb) && last(l).position == 0
-            push!(lv, structuredefinedlevel)
-        end
-    end
-    if !partial
-        filter!(!ispartial, lv)
-    end
-    unique!(lv)
-    if !sublevel
-        lv = transform_sublevel.(lv)
-    end
-    minimal_annotationlevel(lv)
-end
-annotationlevel(c::AbstractGlycan; partial = false, sublevel = true) = [completestructurelevel]
-annotationlevel(c::GlyComp; partial = false, sublevel = true) = [structuredefinedlevel]
-annotationlevel(c::Monosaccharide; partial = false, sublevel = true) = [completestructurelevel] # check sub position
-
-annotationlevel(c::AbstractPeptide; partial = false, sublevel = true) = [completestructurelevel]
-annotationlevel(::Metabolite; partial = false, sublevel = true) = [completestructurelevel]
-annotationlevel(::BasicCompound; partial = false, sublevel = true) = [completestructurelevel]
-annotationlevel(::UnknownChemical; partial = false, sublevel = true) = [molecularspecieslevel]
-
-function isstructuredefinedlevel(lipid::Lipid)
-    overmolecularspecieslevel(lipid) || return false
-    all(isstructuredefinedlevel, getlipidbody(lipid)) ? !any(!isstructuredefinedlevel, getlipidchain(lipid)) : false
-    # one not full, all over sd
-end
-
-function isstructuredefinedlevel(chain::CarbonChain)
-    sub = chain.substituent
-    isfullstructurelevel(chain) && return false
-    for (f, n) in sub
-        f isa UnknownGroup && return false # specieslevel
-    end
-    true
-end
-
-function isstructuredefinedlevel(c::AbstractChemical)
-    # check linkage
-    all(isstructuredefinedlevel, getchaincomponent(c))
-end
-
-isstructuredefinedlevel(c::Saccharide) = true # check linkage
-isstructuredefinedlevel(c::AbstractPeptide) = true # check linkage
-isstructuredefinedlevel(::Metabolite) = true
-isstructuredefinedlevel(::BasicCompound) = true
-
-function issubstructuredefinedlevel(chain::CarbonChain)
-    sub = chain.substituent
-    issublevelstructurelevel(chain) && return false
-    for (f, n) in sub
-        f isa UnknownGroup && return false # specieslevel
-    end
-    true
-end
-
-function issublevelstructurelevel(chain::CarbonChain)
-    sub = chain.substituent
-    isnothing(sub) || isempty(sub) || chain.substituent isa Vector{<: Pair{UInt8, <: AbstractFunctionalGroup}} 
-end
-
-function isfullstructurelevel(c::AbstractChemical)
-    chain = getchaincomponent(c)
-    if all(isfullstructurelevel, chain)
-        length(chain) == 1 && return true
-        default_lk = [makelinkage(DehydratedChemical, a, b) for (a, b) in IterTools.partition(chain, 2, 1)]
-        real_lk = getchainlinkage(c)
-        isnothing(real_lk) && return false
-        for (d, r) in zip(default_lk, real_lk)
-            dl, dr = d 
-            rl, rr = r 
-            dl == lk(nothing) || iszero(rl.position) && return false
-            dr == lk(nothing) || iszero(rr.position) && return false
-        end
-        return true
-    end
-    false
-end
-
-function isfullstructurelevel(lipid::Lipid)
-    overmolecularspecieslevel(lipid) || return false
-    all(isfullstructurelevel, getlipidbody(lipid)) ? !any(!isfullstructurelevel, getlipidchain(lipid)) : false
-end
-
-function isfullstructurelevel(chain::CarbonChain)
-    sub = chain.substituent
-    if isnothing(sub) || isempty(sub) || chain.substituent isa Vector{<: Pair{UInt8, <: AbstractFunctionalGroup}} 
-        dbs = chain.doublebond
-        iszero(dbs) && return true
-        isa(dbs, UInt8) && return false
-        return !any(x -> iszero(x % 3), dbs)
-    end
-    false
-end
-
-isfullstructurelevel(c::Monosaccharide) = true
-isfullstructurelevel(c::αAminoAcid) = true
-isfullstructurelevel(::Metabolite) = true
-isfullstructurelevel(::BasicCompound) = true
-
-function isspecieslevel(chain::CarbonChain)
-    sub = chain.substituent
-    isfullstructurelevel(chain) && return false
-    for (f, n) in sub
-        f isa UnknownGroup && return true # specieslevel
-    end
-    false
-end
-
-function issnpositionlevel(lipid::Union{<: Glycerolipid, <: Glycerophospholipid})
-    overmolecularspecieslevel(lipid) || return false
-    position = decode_sn(lipid)
-    !any(==(0), position)
-    # one not full, all over sn
-end
-
-function ismolecularspecieslevel(lipid::Lipid)
-    !any(x -> ncarbonchain(x) > 1, getlipidchain(lipid))
-end
-
-function isdbpositionlevel(c::AbstractChemical)
-    # check linkage
-    all(isdbpositionlevel, getchaincomponent(c))
-end
-
-function isdbpositionlevel(lipid::Lipid)
-    overmolecularspecieslevel(lipid) || return false
-    all(isdbpositionlevel, getlipidbody(lipid)) ? !any(!isdbpositionlevel, getlipidchain(lipid)) : false
-    # one not full, all over db
-end
-
-function isdbpositionlevel(chain::CarbonChain)
-    dbs = chain.doublebond
-    sub = chain.substituent
-    isfullstructurelevel(chain) && return false
-    for (f, n) in sub
-        f isa UnknownGroup && return false # specieslevel
-    end
-    iszero(dbs) || !isa(dbs, UInt8)
-end
-
-isdbpositionlevel(c::Saccharide) = true
-isdbpositionlevel(c::AbstractPeptide) = true
-isdbpositionlevel(::Metabolite) = true
-isdbpositionlevel(::BasicCompound) = true
-
-
-function overmolecularspecieslevel(lipid::Lipid)
-    !any(x -> ncarbonchain(x) > 1, getlipidchain(lipid))
-end
-=#

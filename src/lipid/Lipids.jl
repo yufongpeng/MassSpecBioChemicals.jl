@@ -1,12 +1,12 @@
 module Lipids
-using Reexport, IterTools, MLStyle
-@reexport using ..MassSpecBioChemicals
-using MassSpecChemicals: AbstractChemical, tuplize, parse_chemical, chemicalabbr
+using Reexport, IterTools, MLStyle, Dates, Downloads, ZipArchives
+using ..MassSpecBioChemicals
+using MassSpecChemicals: AbstractChemical, tuplize
 @reexport using ..MassSpecBioChemicals.BasicCompounds, ..MassSpecBioChemicals.Metabolites, ..MassSpecBioChemicals.Proteins, ..MassSpecBioChemicals.Glycans
-import ..MassSpecBioChemicals: originalmolecule, leavinggroup, conjugation, repr_linkage, dehydroxyposition, dehydrogenposition
-import MassSpecChemicals: chemicalname, parse_chemical, chemicalformula, chemicalabbr, repr_smiles
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, repr_linkage, dehydroxyposition, dehydrogenposition
+import MassSpecChemicals: parse_chemical, getchemicalattr
 import Base: isless, getindex, length, size, eltype, getproperty, propertynames, setproperty!, keys, values, pairs
-using ..MassSpecBioChemicals: lk, makemolecule, makelinkage, concatmolecule, AbstractFunctionalGroup, UnknownGroup, dehydrogenposition, dehydroxyposition
+using ..MassSpecBioChemicals: lk, makechemical, makelinkage, concatchemical, AbstractFunctionalGroup, UnknownGroup, dehydrogenposition, dehydroxyposition
 using ..MassSpecBioChemicals.Glycans: ap, α, β, parse_monosaccharide, MONO_STRUCT
 using ..MassSpecBioChemicals.Proteins: parse_aa, parse_aa_fg, parse_aa3, letter3_abbr
 export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, SPB, AbstractSTRing, STRing, SRing, DSMSRing, DCRing, CASRing, BRSRing, EGSRing, DEGSRing, SISRing, STSRing,
@@ -31,7 +31,7 @@ export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, 
         Sterol, FreeSterol, Sterylester, SubstitutedSterol,
         Prenol, Retinylester, CoenzymeQ,
 
-        parse_lipid, repr_smiles_carbonchain, repr_smiles,
+        parse_lipid, chemicalsmiles_carbonchain, 
 
         specieslevel, molecularspecieslevel, phosphatepositionlevel, snpositionlevel, 
         passphosphatepositionlevel, passsnpositionlevel, 
@@ -173,15 +173,15 @@ const Omodifieddiradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B, C 
 const Sulfoquinovosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C}
 const Sulfoquinovosylmonoradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
 const Sulfoquinovosyldiradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-const Monogalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Glycerol)}}, C}
-const Monogalactosylmonoradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-const Monogalactosyldiradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-const Digalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Gal), <: includeSIL(Glycerol)}}, C}
-const Digalactosylmonoradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Gal), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-const Digalactosyldiradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Gal), <: includeSIL(Gal), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-const Glucuronosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlcA), <: includeSIL(Glycerol)}}, C}
-const Glucuronosylmonoradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlcA), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-const Glucuronosyldiradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlcA), <: includeSIL(Glycerol)}}, C <: DiradylChain}
+const Monogalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C}
+const Monogalactosylmonoradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
+const Monogalactosyldiradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
+const Digalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C}
+const Digalactosylmonoradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
+const Digalactosyldiradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
+const Glucuronosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C}
+const Glucuronosylmonoradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
+const Glucuronosyldiradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C <: DiradylChain}
 # SMGDG, CDPDAG
 abstract type Glycerophospholipid{B, C} <: Lipid{B, C} end # PX [0] [0, 0] [1, 2], LPX [0] [1/2]
 struct Radylglycerophosphate{B <: DehydratedChemical, C} <: Glycerophospholipid{B, C}
@@ -212,8 +212,8 @@ const Lysophosphatidylserine{B, C} = Monoradylglycerophosphate{B, C} where {B <:
 const Phosphatidylserine{B, C} = Diradylglycerophosphate{B, C} where {B <: glycerophospho(Serine), C <: DiradylChain}
 const LysophosphatidylNmodifiedserine{B, C} = Monoradylglycerophosphate{B, C} where {D, B <: glycerophospho(D, Serine), C <: HeadMonoradylChain}
 const PhosphatidylNmodifiedserine{B, C} = Diradylglycerophosphate{B, C} where {D, B <: glycerophospho(D, Serine), C <: HeadDiradylChain}
-const Lysophosphatidylinositol{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophospho(Ino), C <: MonoradylChain}
-const Phosphatidylinositol{B, C} = Diradylglycerophosphate{B, C} where {B <: glycerophospho(Ino), C <: DiradylChain} # include PIP
+const Lysophosphatidylinositol{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophospho(Inositol), C <: MonoradylChain}
+const Phosphatidylinositol{B, C} = Diradylglycerophosphate{B, C} where {B <: glycerophospho(Inositol), C <: DiradylChain} # include PIP
 const Lysophosphatidylglycerol{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophospho(Glycerol), C <: MonoradylChain}
 const Phosphatidylglycerol{B, C} = Diradylglycerophosphate{B, C} where {B <: glycerophospho(Glycerol), C <: DiradylChain}
 const Lysophosphatidylglycerolphosphate{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophosphophosphate(Glycerol), C <: MonoradylChain}
@@ -287,20 +287,20 @@ const SphingoidBase{C} = SphingoidBaseBone{Nothing, C} where {C <: CarbonChain{S
 const Glycosylceramide{H, C} = CeramideBone{H, C} where {H <: AbstractGlycan, C <: SUM_CER}
 const Glycosylsphingoidbase{H, C} = SphingoidBaseBone{H, C} where {H <: AbstractGlycan, C <: CarbonChain{SPB}}
 
-const Hexlike = includeSIL(Glycan{<: Tuple{<: AbstractHex}})
+const Hexlike = includeSIL(Glycan{<: Tuple{<: AbstractHexose}})
 
 const CeramidePhosphate{H, C} = CeramideBone{H, C} where {H <: PPA, C <: SUM_CER}
 const SphingoidBasePhosphate{H, C} = SphingoidBaseBone{H, C} where {H <: PPA, C <: CarbonChain{SPB}}
-const Inositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ino), <: PPA}}, C <: SUM_CER}
-const Lysoinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ino), <: PPA}}, C <: CarbonChain{SPB}}
+const Inositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
+const Lysoinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
 const Ethanolaminephosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ethanolamine), <: PPA}}, C <: SUM_CER}
 const Lysoethanolaminephosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ethanolamine), <: PPA}}, C <: CarbonChain{SPB}}
-const Mannosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Man), <: includeSIL(Ino), <: PPA}}, C <: SUM_CER}
-const Lysomannosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Man), <: includeSIL(Ino), <: PPA}}, C <: CarbonChain{SPB}}
-const Mannosyldiinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ino), <: PPA, <: includeSIL(Man), <: includeSIL(Ino), <: PPA}}, C <: SUM_CER}
-const Lysomannosyldiinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ino), <: PPA, <: includeSIL(Man), <: includeSIL(Ino), <: PPA}}, C <: CarbonChain{SPB}}
-const Glycosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Ino), <: PPA}}, C <: SUM_CER}
-const Lysoglycosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Ino), <: PPA}}, C <: CarbonChain{SPB}}
+const Mannosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
+const Lysomannosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
+const Mannosyldiinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA, <: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
+const Lysomannosyldiinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA, <: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
+const Glycosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
+const Lysoglycosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
 const Sphingomyelin{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Choline), <: PPA}}, C <: SUM_CER}
 const Lysosphingomyelin{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Choline), <: PPA}}, C <: CarbonChain{SPB}}
 
@@ -331,11 +331,11 @@ struct CoenzymeQ{C <: IsoprenoidChain} <: Prenol{C} end
 
 include("database.jl")
 include("interface.jl")
-include("traits.jl")
+include("annotationlevel.jl")
 include("transform.jl")
-include("class_struct.jl")
+include(joinpath("input", "input.jl"))
 include("const.jl")
-include("input.jl")
+include("abbr.jl")
 include("output.jl")
  
 end
