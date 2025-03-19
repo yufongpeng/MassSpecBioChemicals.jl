@@ -2,11 +2,11 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - test
     tags: ['*']
   pull_request:
     branches:
-      - main
+      - test
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
