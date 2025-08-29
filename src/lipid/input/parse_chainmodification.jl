@@ -65,36 +65,31 @@ end
 Parse chain modification for full structure level
 """
 function parse_chainmodification(::Type{<: Radyl}, mod, ox = nothing)
-    isempty(mod) && isnothing(ox) && return nothing
+    isempty(mod) && isnothing(ox) && return (nothing, Pair{UInt8, RSSystem}[])
     i = findfirst(x -> !isnothing(match(r"^;O\d*$", x)), mod)
     if isnothing(ox) && isnothing(i)
-        pc = vcat((parse_definedmodification(x) for x in mod)...)
-        if (eltype(pc) <: Pair{UInt8, <: AbstractFunctionalGroup}) || (eltype(pc) <: Pair{<: AbstractFunctionalGroup, UInt8})
-            sort_chainmodification!(pc)
-        else
-            throw(ArgumentError("Chain modification should be in either defined structure level or full structure level"))
-        end
+        split_fg_chirality!(vcat((parse_definedmodification(x) for x in mod)...))
     elseif isnothing(ox)
-        sort_chainmodification!([parse_speciesmodification(x) for x in mod])
+        (sort_chainmodification!([parse_speciesmodification(x) for x in mod]), Pair{UInt8, RSSystem}[])
     elseif isnothing(i)
         push!(mod, ox)
-        sort_chainmodification!([parse_speciesmodification(x) for x in mod])
+        (sort_chainmodification!([parse_speciesmodification(x) for x in mod]), Pair{UInt8, RSSystem}[])
     else
         throw(ArgumentError("Duplicated oxygen atom in chain modification"))
     end
 end
 
-function parse_chainmodification(::Type{<: SPB}, mod, ox)
+function parse_chainmodification(::Type{<: AbstractSPB}, mod, ox)
     # except O-
-    isempty(mod) && isnothing(ox) && return nothing
+    isempty(mod) && isnothing(ox) && return (nothing, Pair{UInt8, RSSystem}[])
     i = findfirst(x -> !isnothing(match(r"^;O\d*$", x)), mod)
     if isnothing(ox) && isnothing(i)
-        sort_chainmodification!(vcat((parse_definedmodification(x) for x in mod)...))
+        split_fg_chirality!(vcat((parse_definedmodification(x) for x in mod)...))
     elseif isnothing(ox)
-        sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod])
+        (sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
     elseif isnothing(i)
         push!(mod, ox)
-        sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod])
+        (sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
     else
         throw(ArgumentError("Duplicated oxygen atom in chain modification"))
     end
@@ -146,6 +141,29 @@ function parse_speciesmodification(mod; onlinked = true)
     c => (isempty(n) ? 0x01 : parse(UInt8, n))
 end
 
+parse_rschirality(c::AbstractString) = c == "R" ? RChirality() : c == "S" ? SChirality() : throw(ArgumentError("Unknown chirality `$c`"))
+function parse_structureposition(v, x) 
+    p1, p2, c = x.captures
+    p1 = parse(UInt8, p1)
+    p2 = (isnothing(p2) || isempty(p2)) ? p1 : parse(UInt8, p2)
+    c = isnothing(c) ? RSChirality() : parse_rschirality(c)
+    ([p1 => v], [p2 => c])
+end
+function parse_structureposition(v::Union{Epoxy, Peroxy}, x) 
+    p1, p2, c = x.captures
+    p1 = parse(UInt8, p1)
+    p2, p3 = (isnothing(p2) || isempty(p2)) ? (p1, p1 + 0x01) : (p1, parse(UInt8, p2))
+    c = isnothing(c) ? RSChirality() : parse_rschirality(c)
+    ([p1 => v, p3 => Hydrogen()], [p2 => c, p3 => RSChirality()])
+end
+function parse_structureposition(v::Oxo, x) 
+    p1, p2, c = x.captures
+    p1 = parse(UInt8, p1)
+    p2 = (isnothing(p2) || isempty(p2)) ? p1 : parse(UInt8, p2)
+    isnothing(c) || @warn "Oxo group has no chiral center."
+    ([p1 => v], [p2 => AChirality()])
+end
+# nCOX[n-1R/S] = C_(n-1)-COX
 """
     parse_definedmodification(mod)
 
@@ -155,19 +173,28 @@ function parse_definedmodification(mod; onlinked = true)
     FG_SP = onlinked ? FG : FG_CLINKED 
     ms = split_chainmodification_c(mod)
     if startswith(first(ms), r";\d")
+        # position 
+        # config
         for (k, v) in FG_SP
-            m = match.(Regex(string("^[;,](\\d+)", k, "\$")), ms)
+            m = match.(Regex(string("^[;,](\\d+)", k, "(?:\\[(\\d*)([RS]*)\\])*\$")), ms)
             all(isnothing, m) && continue
             any(isnothing, m) && throw(ArgumentError("Some chain modification does not have position, \"$mod\""))
-            return [parse(UInt8, first(x.captures)) => v for x in m]
+            return [parse_structureposition(v, x) for x in m]
         end
-        mm = match(r"^[;,]\d+(C?[ON]?)\((.*)\)$", first(ms))
+        mm = match(r"^[;,]\d+(C?[ON]?)\((.*)\)(?:\[\d*[RS]*\])*$", first(ms))
+        v = ""
         if isnothing(mm)
-            mm = match(r"^[;,]\d+(C?[ON]?)(.*)$", first(ms))
+            mm = match(r"^[;,]\d+(C?[ON]?)(.*[^\]])(?:\[\d*[RS]*\])*$", first(ms))
+        else
+            v = string(first(mm.captures), "(", last(mm.captures), ")")
         end
         isnothing(mm) && throw(ArgumentError("Invalid chain modification, \"$mod\""))
+        v = isempty(v) ? string(mm...) : v
+        v = replace(v, "(" => "\\(", ")" => "\\)", "[" => "\\[", "]" => "\\]")
         c = parse_tailsubstituent(mm...; onlinked)
-        return [parse(UInt8, first(x.captures)) => c for x in match.(r"^[;,](\d+)C?[ON]?", ms)]
+        m = match.(Regex(string("^[;,](\\d+)", v, "(?:\\[(\\d*)([RS]*)\\])*\$")), ms)
+        any(isnothing, m) && throw(ArgumentError("Some chain modification does not have position, \"$mod\""))
+        return [parse_structureposition(c, x) for x in m]
     elseif length(ms) == 1
         for (k, v) in FG_SP
             m = match(Regex(string("^;\\(?", k, "\\)?(\\d*)\$")), mod)
@@ -183,11 +210,62 @@ function parse_definedmodification(mod; onlinked = true)
     # [cyc], multiple layer?
 end
 
-function sort_chainmodification!(mod)  
-    if first(first(mod)) isa Number
-        sort!(mod; by = x -> (sub_abbr(last(x)), first(x)))
-    else
-        sort!(mod; by = x -> (sub_abbr(first(x)), last(x)))
+sort_chainmodification!(::Nothing) = nothing
+
+function sort_chainmodification!(mod::Vector{<: Tuple})
+    sort!(mod; by = x -> (sub_abbr(last(first(x))), first(first(x))))
+end  
+
+# delete duplicate
+function sort_chainmodification!(mod::AbstractVector{<: Pair{<: Number}})
+    sort!(mod; by = x -> (sub_abbr(last(x)), first(x)))# p => fg
+    del = Int[]
+    p = 0x00
+    for (i, x) in enumerate(mod)
+        if last(x) == Hydrogen() && p == first(x)
+            push!(del, i)
+        elseif last(x) == Hydrogen()
+            p = first(x)
+        end
     end
+    deleteat!(mod, del)
 end
 
+function sort_chainmodification!(mod)        
+    # fg => n
+    m = Dict{eltype(mod).parameters...}()
+    for (k, v) in mod 
+        get!(m, k, 0x00)
+        m[k] += v 
+    end
+    sort!(filter!(x -> last(x) > 0, collect(pairs(m))); by = x -> (sub_abbr(first(x)), last(x)))
+    # del = Int[]
+    # for (i, v) in enumerate(mod)
+    #     n = m[first(v)]
+    #     if n == 0 
+    #         push!(del, i)
+    #         continue
+    #     elseif n > 0 && last(v) != n
+    #         mod[i] = first(v) => n 
+    #     end 
+    #     m[first(v)] = 0x00
+    # end
+    # sort!(deleteat!(mod, del); by = x -> (sub_abbr(first(x)), last(x)))
+end
+
+split_fg_chirality!(x::Vector{<: Pair{<: AbstractFunctionalGroup, UInt8}}) = sort_chainmodification!(convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, x)), Pair{UInt8, RSSystem}[]
+#split_fg_chirality(x::Vector{<: Tuple}) = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, first.(x)), convert(Vector{Pair{UInt8, RSSystem}}, last.(x))
+function split_fg_chirality!(x::Vector{<: Tuple}) 
+    cd = Dict{UInt8, RSSystem}()
+    for cs in last.(x)
+        for (p, c) in cs 
+            get!(cd, p, RSChirality())
+            if cd[p] == RSChirality()
+                cd[p] = c 
+            elseif cd[p] != c && c != RSChirality()
+                throw(ArgumentError("Conflicts of chirality at position `$(Int(p))`"))
+            end
+        end
+    end
+    sort_chainmodification!(convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, vcat(first.(x)...))), collect(pairs(cd))
+end

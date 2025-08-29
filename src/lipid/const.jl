@@ -24,7 +24,7 @@ const NAAA = [
 const GLYCAN_CER = ["GlcCer", "GalCer", "LacCer"]
 const GLYCAN_AS_LIPID = ["GM3", "GM2", "GM1a", "GD1a", "GD1aα", "GD1aa", "GT1a", "GT1aα", "GT1aa", "GD3", "GD2", "GD1b", "GT1b", "GT1bα", "GT1ba", "GQ1b", "GQ1bα", "GQ1ba",
 "GT3", "GT2", "GT1c", "GQ1c", "GQ1cα", "GQ1ca", "GP1c", "GP1cα", "GP1ca", "GA2", "GA1", "GM1b", "GM1α", "GM1alpha", "GD1c", "GD1α", "GD1alpha", "GD1e", "GM1", "GD1", "GT1", "GQ1", "GP1", 
-"Gb3", "Gb4", "iGb3", "iGb4", "Lc3", "LM1", "GM4", "SM4", "SM3", "SM2", "SM1", "SM1a", "SM1b", "SB1", "SB1a", "GM1?", "GD1?", "GT1?", "GQ1?"]
+"Gb3", "Gb4", "Gb5", "iGb3", "iGb4", "iGb5", "Lc3", "Lc4", "LM1", "nLc4", "nLc5",  "GM4", "SM4", "SM3", "SM2", "SM1", "SM1a", "SM1b", "SB1", "SB1a", "GM1?", "GD1?", "GT1?", "GQ1?"]
 const FREESTEROL = ["C", "DSMS", "DC", "CAS", "BRS", "EGS", "DEGS", "SIS", "STS"]
 const CLASS = [
     "HC", "FA", "FAL", "FOH", "WE", "FAM", "FattyAmide", "FN", "FattyAmine", "NA", "NAE", "NAT", [string("NA", x) for x in NAAA]..., "CAR", "CoA", "FAHFA",
@@ -57,9 +57,64 @@ const PRE_MODIFIER = Dict{String, String}(
     # "AGalCer"   => "FA\\s+\\d+:\\d+\\s*(?:\\([\\d,\\,,E,Z,\\s]+\\))?\\s*(?:\\[[^\\]\\[]+\\])?((?:;[^;\\(/_]*(?:\\([^)(]*+(?:(?1)[^)(]*)*+\\))?[^;/_]*)*)-",
     "ASM"       => "(FA\\s+\\d+:\\d+[^-]*)-",
     "ACer"      => "(FA\\s+\\d+:\\d+[^-]*)-",
-    "AHexCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
-    "AGlcCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
-    "AGalCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
+    # "AHexCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
+    # "AGlcCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
+    # "AGalCer"   => "(FA\\s+\\d+:\\d+[^-]*)-",
+    [string("NA", x) => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)" for x in NAAA]...,
+    "CAR"       => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)",
+    "LPS"       => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)",
+    "PS"        => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)",
+    "LPS-N"     => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)",
+    "PS-N"      => "((?:\\([RS\\,']+\\)-)*(?:[DL]-)*)",
+    "MG"        => "((?:\\([RS\\,']+\\)-)*)",
+    "DG"        => "((?:\\([RS\\,']+\\)-)*)",
+    "TG"        => "((?:\\([RS\\,']+\\)-)*)",
+    "SQMG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "SQDG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "MGMG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "MGDG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "DGMG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "DGDG"      => "((?:\\([RS\\,']+\\)-)*)",
+    "GlcAMG"    => "((?:\\([RS\\,']+\\)-)*)",
+    "GlcADG"    => "((?:\\([RS\\,']+\\)-)*)",
+    "PA"        => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPA"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "PC"        => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPC"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "PE"        => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPE"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "PE-NMe"    => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPE-NMe"   => "((?:\\([RS\\,']+\\)-)*)",
+    "PE-NMe2"   => "((?:\\([RS\\,']+\\)-)*)",
+    "LPE-NMe2"  => "((?:\\([RS\\,']+\\)-)*)",
+    "PE-N"      => "((?:\\([RS\\,']+\\)-)*)",
+    "LPE-N"     => "((?:\\([RS\\,']+\\)-)*)",
+    "PI"        => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPI"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "PMeOH"     => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPMeOH"    => "((?:\\([RS\\,']+\\)-)*)", 
+    "PEtOH"     => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPEtOH"    => "((?:\\([RS\\,']+\\)-)*)", 
+    "GP"        => "((?:\\([RS\\,']+\\)-)*)", 
+    "LGP"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "PIP"       => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPIP"      => "((?:\\([RS\\,']+\\)-)*)", 
+    "PIP2"      => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPIP2"     => "((?:\\([RS\\,']+\\)-)*)", 
+    "PIP3"      => "((?:\\([RS\\,']+\\)-)*)",
+    "LPIP3"     => "((?:\\([RS\\,']+\\)-)*)",
+    "GP-NAE"    => "((?:\\([RS\\,']+\\)-)*)", 
+    "LPG"       => "((?:\\([RS\\,']+\\)-)*)",
+    "PG"        => "((?:\\([RS\\,']+\\)-)*)",
+    "LPGP"      => "((?:\\([RS\\,']+\\)-)*)",
+    "PGP"       => "((?:\\([RS\\,']+\\)-)*)",
+    "BPA"       => "((?:\\([RS\\,']+\\)-)*)",
+    "SLBPA"     => "((?:\\([RS\\,']+\\)-)*)",
+    "BMP"       => "((?:\\([RS\\,']+\\)-)*)",
+    "LBPA"      => "((?:\\([RS\\,']+\\)-)*)",
+    "CL"        => "((?:\\([RS\\,']+\\)-)*)",
+    "MLCL"      => "((?:\\([RS\\,']+\\)-)*)",
+    "DLCL"      => "((?:\\([RS\\,']+\\)-)*)"
 )
 
 const CLASS_STRUCT = Dict{String, Function}(
@@ -209,7 +264,7 @@ const FG_SPECIES = Dict{String, AbstractFunctionalGroup}(
     "Et"    => Ethyl(),
     "Fo"    => Formyl(),
     "Ac"    => Acetyl(),
-    "S"     => Sulfate(),
+    "S"     => Sulfo(),
 )
 
 
@@ -233,6 +288,7 @@ const FG_CLINKED = Dict{String, AbstractFunctionalGroup}(
     "OO"    => Peroxy(),
     "NH2"   => Amino(),
     "SH"    => Sulfanyl(),
+    "S"     => Sulfo(),
     "NO2"   => Nitro(),
 )
 
@@ -262,16 +318,16 @@ const FG = Dict{String, AbstractFunctionalGroup}(
     "OO"    => Peroxy(),
     "NH2"   => Amino(),
     "SH"    => Sulfanyl(),
-    "P"     => Phosphate(),
-    "MP"    => Phosphate(),
-    "DP"    => Diphosphate(),
-    "TP"    => Triphosphate(),
-    "S"     => Sulfate(),
-    "SO3"   => Sulfite(),
+    "P"     => Phosphoryl(),
+    "MP"    => Phosphoryl(),
+    "DP"    => Diphosphoryl(),
+    "TP"    => Triphosphoryl(),
+    "S"     => Sulfo(),
     "NO2"   => Nitro(),
-    "COT"   => XLinkedFunctionalGroup(CarboxylicAcidGroup(), Tauryl()),
-    [string("CO", x) => XLinkedFunctionalGroup(CarboxylicAcidGroup(), conjugation(parse_aa(x))) for x in NAAA]...,
-    [string("O", k) => XLinkedFunctionalGroup(Hydroxy(), Substituent(Dehydroxy, v(), Anomerposition(dehydrogenposition(v())))) for (k, v) in MONO_STRUCT]...,
+    "COT"   => XLinkedFunctionalGroup(CarboxylicLinkage(), Tauryl()),
+    [string("CO", x) => XLinkedFunctionalGroup(CarboxylicLinkage(), dehydrogengroup(parse_aa(x))) for x in NAAA]...,
+    [string("O", k) => XLinkedFunctionalGroup(OLinkage(), Substituent(Dehydroxy, v(), Anomerposition(dehydrogenposition(v())))) for (k, v) in MONO_STRUCT]...,
+    [string("N", k) => XLinkedFunctionalGroup(NLinkage(), Substituent(Dehydroxy, v(), Anomerposition(dehydrogenposition(v())))) for (k, v) in MONO_STRUCT]...,
     # O..., on chain (Hydroxy, ...(Dehydroxy))
     # N..., on chain (Amino, ...(Dehydroxy))
     # isotope ?
@@ -286,9 +342,10 @@ const FG = Dict{String, AbstractFunctionalGroup}(
 function class_regex()
     C = collect(keys(CLASS_STRUCT))
     RC = map(C) do x                                                                                                                                   
-        "^(.*?)" * get(PRE_MODIFIER, x, "()") * replace(x, "(" => "\\(", ")" => "\\)") * get(POST_MODIFIER, x, "()") * "\$"                                                                                                                                             
+        "^(.*?)" * get(PRE_MODIFIER, x, "()") * replace(x, "(" => "\\(", ")" => "\\)") * get(POST_MODIFIER, x, "()") * "\$"                                                                                                                                           
     end
-    id = sortperm(RC; by = x -> length(x), rev = true)
+    l = [(length(x), length(y)) for (x, y) in zip(C, RC)]
+    id = sortperm(l; rev = true)
     map((x, y) -> (Regex(x), y), RC[id], C[id])
     # sort!(C; by = x -> length(x), rev = true)
     # KC = join(RC, "|")
@@ -299,15 +356,16 @@ end
 
 function chain_regex()
     # X O,P-
-    # r"([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(?:(;O\d*)?(\[[^\[]+\])?)?((?:;[^)(;(/_]*(\([^(?:sn\-)][^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?$"
-    r"([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(?:(;O\d*)?(\[[^\[]+\])?)?((?:;[^)(;/_]*([\(\[][^(?:s)][^)(]*+(?:(?2)[^)(]*)*+[\)\]])?[^)(;/_]*)*)(\(sn-*\d*'*\))?$"
-    #r"([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^)(;(/_]*(\([^(?:sn\-)][^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?+"
-    #r"([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^)(;(/_]*(\([^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?"
+    # r"([\s,/,_][d,t,e]?[P,O,E]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(?:(;O\d*)?(\[[^\[]+\])?)?((?:;[^)(;(/_]*(\([^(?:sn\-)][^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?$"
+    r"^([\s,/,_])([d,t,e]?[P,O,E]-)?(\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(?:(;O\d*)?(\[[^\[]+\])?)?((?:;[^)(;/_]*([\(\[][^(?:s)][^)(]*+(?:(?4)[^)(]*)*+[\)\]])?[^)(;/_]*)*)(\(sn-*\d*'*\))?$"
+    #r"^([\s,/,_](?:\[[RS]\])*[d,t,e]?[P,O,E]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(?:(;O\d*)?(\[[^\[]+\])?)?((?:;[^)(;/_]*([\(\[][^(?:s)][^)(]*+(?:(?2)[^)(]*)*+[\)\]])?[^)(;/_]*)*)(\(sn-*\d*'*\))?$"
+    #r"([\s,/,_][d,t,e]?[P,O,E]?-?\d+:\d+)(\([^(?:sn\-)][^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^)(;(/_]*(\([^(?:sn\-)][^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?+"
+    #r"([\s,/,_][d,t,e]?[P,O,E]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^)(;(/_]*(\([^)(]*+(?:(?2)[^)(]*)*+\))?[^)(;(/_]*)*)(\(sn-*\d*'*\))?"
 end
 # O/P-18:1(5Z);.....[(1,2,3,4,5)13C5](sn-1)
 # r"((?:;(([^)(;/_]*[\(\[][^)(\]\[]*+(?:(?3)[^)(\]\[]*)*+[\)\]])?[^)(;(/_]*)))"
 # map(x -> collect(eachmatch(r"((?:;(([^)(;/_]*[\(\[][^)(\]\[]*+(?:(?3)[^)(\]\[]*)*+[\)\]])?[^)(;(/_]*)))", x)), c)
-# map(x -> match(r"^([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?", x), c)
+# map(x -> match(r"^([\s,/,_][d,t,e]?[P,O,E]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?", x), c)
 # map(x -> match(r"(\(sn-*\d*'*\))?$", x), c)
 # function clsmod_regex()
 #     pre = collect(keys(PRE_MODIFIER))

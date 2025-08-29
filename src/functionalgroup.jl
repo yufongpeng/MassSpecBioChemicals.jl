@@ -58,7 +58,7 @@ abstract type AbstractLinkageposition end
 """
     Linkageposition <: AbstractLinkageposition
 
-Normal linkage position type with no chiral centers or other isomeric differemce. 
+Normal linkage position type. 
 
 * `position`: `Union{Nothing, UInt8}`
 """
@@ -72,6 +72,33 @@ User freiendly function to construct `Linkageposition`.
 """
 lk(x) = Linkageposition(UInt8(x))
 lk(x::Nothing) = Linkageposition(x)
+
+abstract type AbstractConfiguration end 
+abstract type AbstractChirality <: AbstractConfiguration end
+abstract type AbsoluteConfiguration <: AbstractChirality end
+abstract type RSSystem <: AbsoluteConfiguration end 
+struct AChirality <: RSSystem end 
+struct RSChirality <: RSSystem end 
+struct RChirality <: RSSystem end 
+struct SChirality <: RSSystem end 
+
+abstract type OpticRotationSystem <: AbsoluteConfiguration end 
+struct NoOpticRotation <: OpticRotationSystem end 
+struct UnknownRotation <: OpticRotationSystem end 
+struct ClockwiseRotation <: OpticRotationSystem end 
+struct CounterclockwiseRotation <: OpticRotationSystem end 
+
+abstract type GlyceraldehydeSystem <: AbstractConfiguration end 
+struct NoDLForm <: GlyceraldehydeSystem end 
+struct DLForm <: GlyceraldehydeSystem end 
+struct LForm <: GlyceraldehydeSystem end 
+struct DForm <: GlyceraldehydeSystem end 
+
+abstract type GeometricConfiguration <: AbstractConfiguration end
+struct NoEZConfiguration <: GeometricConfiguration end
+struct EZConfiguration <: GeometricConfiguration end
+struct EConfiguration <: GeometricConfiguration end
+struct ZConfiguration <: GeometricConfiguration end
 
 """
     AbstractFunctionalGroup <: AbstractChemical
@@ -105,6 +132,7 @@ struct Substituent{M <: AbstractChemical, S <: LeavingGroup} <: FunctionalGroup{
     position::AbstractLinkageposition
 end
 Substituent(::Type{S}, m::M, p = Linkageposition(0x00)) where {M, S} = Substituent{M, S}(m, p)
+Substituent(::S, m::M, p = Linkageposition(0x00)) where {M, S} = Substituent{M, S}(m, p)
 
 """
     XLinkedFunctionalGroup{M, L} <: AbstractFunctionalGroup

@@ -6,25 +6,38 @@ using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
 import MassSpecChemicals: parse_chemical, getchemicalattr
 using ..MassSpecBioChemicals.Proteins: parse_aa_fg
-using ..MassSpecBioChemicals: lk
+using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup
 using IterTools
 import Base: show
-import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, getchaincomponent, getchainlinkage, ischainedchemical, dehydroxyposition, dehydrogenposition
+import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem
 export Saccharide, Monosaccharide, 
-        AbstractHexose, Hexose, Glucose, Galactose, Mannose, 
-        AbstractDeoxyhexose, Deoxyhexose, Fucose, 
-        AbstractHexosamine, Hexosamine, Glucosamine, Galactosamine, Mannosamine, 
-        AbstractNacetylhexosamine, Nacetylhexosamine, Nacetylgluosamine, Nacetylgalactosamine, Nacetylmannosamine, 
-        AbstractHexuronicAcid, HexuronicAcid, GlucuronicAcid, GalacturonicAcid, MannuronicAcid,
-        SialicAcid, NeuraminicAcid, NacetylneuraminicAcid, NglycolylneuraminicAcid, Kdn,
-        AbstractPentose, Pentose, Ribose, Arabinose, Xylose, AbstractDeoxypentose, Deoxypentose, Deoxyribose, 
-        Inositol, Sulfoquinovose, 
+        AbstractHexose, Hexose, Glucose, Mannose, Galactose, Gulose, Altose, Allose, Talose, Idose, Apiose, Fructose, Tagatose, Sorbose, Psicose, 
+        AbstractHexosamine, Hexosamine, Glucosamine, Mannosamine, Galactosamine, Gulosamine, Altosamine, Allosamine, Talosamine, Idosamine, 
+        AbstractNacetylhexosamine, Nacetylhexosamine, Nacetylgluosamine, Nacetylmannosamine, Nacetylgalactosamine, Nacetygalactosamine, Nacetygulosamine, Nacetyaltosamine, Nacetyallosamine, Nacetytalosamine, Nacetyidosamine, 
+        AbstractDeoxyhexose, Deoxyhexose, Quinovose, Rhamnose, Fucose, Sixdeoxygulose, Sixdeoxyaltose, Sixdeoxytalose, 
+        AbstractNacetyldeoxyhexosamine, Nacetyldeoxyhexosamine, Nacetylquinovosamine, Nacetylrhamnosamine, Nacetylfucosamine, Nacetylsixdeoxyaltosamine, Nacetylsixdeoxytalosamine, 
+        AbstractDideoxyhexose, Dideoxyhexose, 
+        AbstractHexuronicAcid, HexuronicAcid, GlucuronicAcid, MannuronicAcid, GalacturonicAcid, GuluronicAcid, AlturonicAcid, AlluronicAcid, TaluronicAcid, IduronicAcid, 
+        NonulosonicAcid, SialicAcid, NeuraminicAcid, NacetylneuraminicAcid, NglycolylneuraminicAcid, Kdn,
+        DideoxynonulosonicAcid, LegionaminicAcid, FourepilegionaminicAcid, EightepilegionaminicAcid, AcinetaminicAcid, EightepiacinetaminicAcid, PseudaminicAcid, 
+
+        AbstractPentose, Pentose, Arabinose, Lyxose, Xylose, Ribose, AbstractDeoxypentose, Deoxypentose, Deoxyribose, 
+        Inositol, 
+
         AbstractGlycan, Glycan, GlyComp,
         AbstractAnomerposition, Anomerposition, Alphaposition, Betaposition,
-        Ganglioseries,
+        LinearForm, 
+        PyranoseForm, 
+        FuranoseForm, 
+        CycliceForm, 
+        Deoxy, 
+        Epi, 
+        SimpleGlcseries,
         GM4,
         SM4,
         Lac,
+        Ganglioseries,
+        Sulfoganglioseries,
         SM3,
         SM2,
         SM1a,
@@ -78,319 +91,95 @@ export Saccharide, Monosaccharide,
         Globoseries,
         Gb3,
         Gb4,
+        Gb5,
         Isogloboseries,
         iGb3,
         iGb4,
+        iGb5,
         Lactoseries,
         Lc3,
-        LM1
+        Lc4,
+        LM1,
+        Neolactoseries,
+        nLc4,
+        nLc5
+
         
 abstract type Saccharide <: AbstractChemical end
-abstract type Monosaccharide{T} <: Saccharide end
-abstract type AbstractHexose{T} <: Monosaccharide{T} end
-abstract type AbstractDeoxyhexose{T} <: Monosaccharide{T} end
-abstract type AbstractHexosamine{T} <: Monosaccharide{T} end
-abstract type AbstractNacetylhexosamine{T} <: Monosaccharide{T} end
-abstract type AbstractHexuronicAcid{T} <: Monosaccharide{T} end
-abstract type SialicAcid{T} <: Monosaccharide{T} end
-abstract type AbstractPentose{T} <: Monosaccharide{T} end
-abstract type AbstractDeoxypentose{T} <: Monosaccharide{T} end
+"""
+"""
+abstract type Monosaccharide{D, P, T} <: Saccharide end
+abstract type AbstractHexose{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractHexosamine{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractNacetylhexosamine{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractHexuronicAcid{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractDeoxyhexose{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractNacetyldeoxyhexosamine{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractDideoxyhexose{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type NonulosonicAcid{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type SialicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
+abstract type DideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
+abstract type AbstractPentose{D, P, T} <: Monosaccharide{D, P, T} end
+abstract type AbstractDeoxypentose{D, P, T} <: Monosaccharide{D, P, T} end
 
 include("anomer.jl")
+
+abstract type MonosaccharideForm end 
+struct LinearForm <: MonosaccharideForm end 
+struct PyranoseForm <: MonosaccharideForm end 
+struct FuranoseForm <: MonosaccharideForm end 
+struct CycliceForm <: MonosaccharideForm end 
+
+struct Deoxy <: AbstractFunctionalGroup end
+struct Epi <: AbstractFunctionalGroup end
+
+include(joinpath("type", "Hex.jl"))
+include(joinpath("type", "HexNAc.jl"))
+include(joinpath("type", "HexN.jl"))
+include(joinpath("type", "HexA.jl"))
+include(joinpath("type", "dHex.jl"))
+include(joinpath("type", "dHexNAc.jl"))
+include(joinpath("type", "ddHex.jl"))
+include(joinpath("type", "NonulosonicAcid.jl"))
+include(joinpath("type", "Pen.jl"))
 #=
 T
 Nothing
 Vector{<: Pair{<: FunctionalGroup, UInt8}}
 Vector{<: Pair{UInt8, <: FunctionalGroup}}
 =#
-"""
-    Hexose{T} <: AbstractHexose{T}
 
-Hexose with or without substituents.
+# Unknown 
+# LDManHep, DDManHep = 6eLDManHep
+# Kdo = 3d5eDDManHep1COOH or 3dDDGalHep1COOH
+# Dha: 3dGalA1COOH
+
+# Bac: 2,4N,6dGlc
+# Mur: 2N,3carboxyethylGlc
+
 """
-struct Hexose{T} <: AbstractHexose{T}
+    Inositol{D, P, T} <: Monosaccharide{D, P, T}
+
+Inositol.
+"""
+struct Inositol{D, P, T} <: Monosaccharide{D, P, T}
     substituent::T
 end
-Hexose() = Hexose(nothing)
-"""
-    Glucose{T} <: AbstractHexose{T}
-
-Glucose with or without substituents.
-"""
-struct Glucose{T} <: AbstractHexose{T}
-    substituent::T
-end
-Glucose() = Glucose(nothing)
-"""
-    Galactose{T} <: AbstractHexose{T}
-
-Galactose with or without substituents.
-"""
-struct Galactose{T} <: AbstractHexose{T}    
-    substituent::T
-end
-Galactose() = Galactose(nothing)
-"""
-    Mannose{T} <: AbstractHexose{T}
-
-Mannose with or without substituents.
-"""
-struct Mannose{T} <: AbstractHexose{T}    
-    substituent::T
-end
-Mannose() = Mannose(nothing)
-
-"""
-    Hexosamine{T} <: AbstractHexosamine{T}
-
-Hexosamine with or without substituents.
-"""
-struct Hexosamine{T} <: AbstractHexosamine{T}
-    substituent::T
-end
-Hexosamine() = Hexosamine(nothing)
-"""
-    Glucosamine{T} <: AbstractHexosamine{T}
-
-Glucosamine with or without substituents.
-"""
-struct Glucosamine{T} <: AbstractHexosamine{T}
-    substituent::T
-end
-Glucosamine() = Glucosamine(nothing)
-"""
-    Galactosamine{T} <: AbstractHexosamine{T}
-
-Galactosamine with or without substituents.
-"""
-struct Galactosamine{T} <: AbstractHexosamine{T}    
-    substituent::T
-end
-Galactosamine() = Galactosamine(nothing)
-"""
-    Mannosamine{T} <: AbstractHexosamine{T}
-
-Mannosamine with or without substituents.
-"""
-struct Mannosamine{T} <: AbstractHexosamine{T}    
-    substituent::T
-end
-Mannosamine() = Mannosamine(nothing)
-
-"""
-    Nacetylhexosamine{T} <: AbstractNacetylhexosamine{T}
-
-N-acetylhexosamine with or without substituents.
-"""
-struct Nacetylhexosamine{T} <: AbstractNacetylhexosamine{T}
-    substituent::T
-end
-Nacetylhexosamine() = Nacetylhexosamine(nothing)
-"""
-    Nacetylgluosamine{T} <: AbstractNacetylhexosamine{T}
-
-N-acetylglucosamine with or without substituents.
-"""
-struct Nacetylgluosamine{T} <: AbstractNacetylhexosamine{T}
-    substituent::T
-end
-Nacetylgluosamine() = Nacetylgluosamine(nothing)
-"""
-    Nacetylgalactosamine{T} <: AbstractNacetylhexosamine{T}
-
-N-acetylgalactosamine with or without substituents.
-"""
-struct Nacetylgalactosamine{T} <: AbstractNacetylhexosamine{T}    
-    substituent::T
-end
-Nacetylgalactosamine() = Nacetylgalactosamine(nothing)
-"""
-    Nacetylmannosamine{T} <: AbstractNacetylhexosamine{T}
-
-N-acetylmannosamine with or without substituents.
-"""
-struct Nacetylmannosamine{T} <: AbstractNacetylhexosamine{T}    
-    substituent::T
-end
-Nacetylmannosamine() = Nacetylmannosamine(nothing)
-
-"""
-    HexuronicAcid{T} <: AbstractHexuronicAcid{T}
-
-Hexuronate with or without substituents.
-"""
-struct HexuronicAcid{T} <: AbstractHexuronicAcid{T}
-    substituent::T
-end
-HexuronicAcid() = HexuronicAcid(nothing)
-"""
-    GlucuronicAcid{T} <: AbstractHexuronicAcid{T}
-
-Glucuronic acid with or without substituents.
-"""
-struct GlucuronicAcid{T} <: AbstractHexuronicAcid{T}
-    substituent::T
-end
-GlucuronicAcid() = GlucuronicAcid(nothing)
-"""
-    GalacturonicAcid{T} <: AbstractHexuronicAcid{T}
-
-Galactcuronic acid with or without substituents.
-"""
-struct GalacturonicAcid{T} <: AbstractHexuronicAcid{T}
-    substituent::T
-end
-GalacturonicAcid() = GalacturonicAcid(nothing)
-"""
-    MannuronicAcid{T} <: AbstractHexuronicAcid{T}
-
-Mannuronic acid with or without substituents.
-"""
-struct MannuronicAcid{T} <: AbstractHexuronicAcid{T}
-    substituent::T
-end
-MannuronicAcid() = MannuronicAcid(nothing)
-
-"""
-    Deoxyhexose{T} <: AbstractDeoxyhexose{T}
-
-Deoxyhexose with or without substituents.
-"""
-struct Deoxyhexose{T} <: AbstractDeoxyhexose{T}
-    substituent::T
-end
-Deoxyhexose() = Deoxyhexose(nothing)
-"""
-    Fucose{T} <: AbstractDeoxyhexose{T}
-
-Fucose with or without substituents.
-"""
-struct Fucose{T} <: AbstractDeoxyhexose{T}
-    substituent::T
-end
-Fucose() = Fucose(nothing)
-
-"""
-    NeuraminicAcid{T} <: SialicAcid{T}
-
-Neuraminic acid with or without substituents.
-"""
-struct NeuraminicAcid{T} <: SialicAcid{T}
-    substituent::T
-end
-NeuraminicAcid() = NeuraminicAcid(nothing)
-"""
-    NacetylneuraminicAcid{T} <: SialicAcid{T}
-
-N-acetylneuraminic acid (nana) with or without substituents.
-"""
-struct NacetylneuraminicAcid{T} <: SialicAcid{T}
-    substituent::T
-end
-NacetylneuraminicAcid() = NacetylneuraminicAcid(nothing)
-"""
-    NglycolylneuraminicAcid{T} <: SialicAcid{T}
-
-N-glycolylneuraminic acid with or without substituents.
-"""
-struct NglycolylneuraminicAcid{T} <: SialicAcid{T}
-    substituent::T
-end
-NglycolylneuraminicAcid() = NglycolylneuraminicAcid(nothing)
-"""
-    Kdn <: SialicAcid
-
-Keto-deoxy-glycero-galactonononic acid with or without substituents.
-"""
-struct Kdn{T} <: SialicAcid{T}
-    substituent::T
-end
-Kdn() = Kdn(nothing)
-
-"""
-    Pentose{T} <: AbstractPentose{T}
-
-Pentose with or without substituents.
-"""
-struct Pentose{T} <: AbstractPentose{T}
-    substituent::T
-end
-Pentose() = Pentose(nothing)
-"""
-    Arabinose{T} <: AbstractPentose{T}
-
-Arabinose with or without substituents.
-"""
-struct Arabinose{T} <: AbstractPentose{T}
-    substituent::T
-end
-Arabinose() = Arabinose(nothing)
-"""
-    Xylose{T} <: AbstractPentose{T}
-
-Xylose with or without substituents.
-"""
-struct Xylose{T} <: AbstractPentose{T}
-    substituent::T
-end
-Xylose() = Xylose(nothing)
-"""
-    Ribose{T} <: AbstractPentose{T}
-
-Ribose with or without substituents.
-"""
-struct Ribose{T} <: AbstractPentose{T}
-    substituent::T
-end
-Ribose() = Ribose(nothing)
-
-"""
-    Deoxypentose{T} <: AbstractDeoxypentose{T}
-
-Deoxypentose with or without substituents.
-"""
-struct Deoxypentose{T} <: AbstractDeoxypentose{T}
-    substituent::T
-end
-Deoxypentose() = Deoxypentose(nothing)
-"""
-    Deoxyribose{T} <: AbstractDeoxypentose{T}
-
-Deoxyribose with or without substituents.
-"""
-struct Deoxyribose{T} <: AbstractDeoxypentose{T}
-    substituent::T
-end
-Deoxyribose() = Deoxyribose(nothing)
-"""
-    Inositol{T} <: Monosaccharide{T}
-
-Inositol with or without substituents.
-"""
-struct Inositol{T} <: Monosaccharide{T}
-    substituent::T
-end
-Inositol() = Inositol(nothing)
-"""
-Sulfoquinovose{T} <: Monosaccharide{T}
-
-Sulfoquinovose with or without substituents.
-"""
-struct Sulfoquinovose{T} <: Monosaccharide{T}
-    substituent::T
-end
-Sulfoquinovose() = Sulfoquinovose(nothing)
+Inositol() = Inositol{Nothing, CycliceForm, Nothing}(nothing)
+Inositol(x::T) where T = Inositol{Nothing, CycliceForm, T}(x)
 
 abstract type AbstractGlycan <: Saccharide end
-struct GM4 <: AbstractGlycan end
-struct SM4 <: AbstractGlycan end
-struct Lac <: AbstractGlycan end #?
+abstract type SimpleGlcseries <: AbstractGlycan end
+struct GM4 <: SimpleGlcseries end
+struct SM4 <: SimpleGlcseries end
+struct Lac <: SimpleGlcseries end #?
 abstract type Ganglioseries <: AbstractGlycan end
-struct SM3 <: Ganglioseries end
-struct SM2 <: Ganglioseries end
-struct SM1a <: Ganglioseries end
-struct SM1b <: Ganglioseries end
-struct SB1a <: Ganglioseries end
+abstract type Sulfoganglioseries <: Ganglioseries end
+struct SM3 <: Sulfoganglioseries end
+struct SM2 <: Sulfoganglioseries end
+struct SM1a <: Sulfoganglioseries end
+struct SM1b <: Sulfoganglioseries end
+struct SB1a <: Sulfoganglioseries end
 const SB1 =  SB1a
 abstract type Ganglio0series <: Ganglioseries end
 struct GA2 <: Ganglio0series end
@@ -492,15 +281,21 @@ end
 abstract type Globoseries <: AbstractGlycan end
 struct Gb3 <: Globoseries end
 struct Gb4 <: Globoseries end
+struct Gb5 <: Globoseries end
 abstract type Isogloboseries <: AbstractGlycan end
 struct iGb3 <: Isogloboseries end
 struct iGb4 <: Isogloboseries end
+struct iGb5 <: Isogloboseries end
 abstract type Lactoseries <: AbstractGlycan end
 struct Lc3 <: Lactoseries end
+struct Lc4 <: Lactoseries end
 struct LM1 <: Lactoseries end
+abstract type Neolactoseries <: AbstractGlycan end
+struct nLc4 <: Lactoseries end
+struct nLc5 <: Lactoseries end
 
 """
-    Glycan{T} <: Saccharide
+    Glycan{T} <: AbstractGlycan
 
 Oligosaccarides or Polysaccharides with or without defined order.
 """
@@ -522,6 +317,16 @@ struct GlyComp{T} <: AbstractGlycan
 end
 # Vector{Pair{Monosaccharide, UInt8}}: type => number, no order
 
+implicit_config(x) = false
+implicit_config(::SialicAcid) = true
+implicit_config(::SimpleGlcseries) = true
+implicit_config(::Ganglioseries) = true
+implicit_config(::Globoseries) = true
+implicit_config(::Isogloboseries) = true
+implicit_config(::Lactoseries) = true
+implicit_config(::Neolactoseries) = true
+
+# D for Abe, Bac, Dha, Kdo, Mur, Par, Tyv; L for Col
 include("interface.jl")
 include("io.jl")
 end

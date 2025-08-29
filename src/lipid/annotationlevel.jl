@@ -109,6 +109,7 @@ function transform_partial(level::LipidAnnotationLevel)
 end
 
 const ANNOTATIONLEVELGAPCHECK = [
+    completestructurelevel,
     fullstructurelevel,
     structureconfiglevel,
     structureconfigpartiallevel,
@@ -197,14 +198,14 @@ end
 function annotationchain(chain::CarbonChain)
     dbs = chain.doublebond
     checkdb = true
-    if iszero(dbs) 
+    if ispropertyempty(dbs) 
         dbs_certain = [dbpositionpartiallevel, dbconfigpartiallevel]
         dbs_result = [dbpositionlevel, dbconfiglevel]
-    elseif isa(dbs, UInt8) || any(<(0x03), dbs)
+    elseif ispropertynumber(dbs) || ispropertypartialposition(dbs)
         dbs_certain = LipidAnnotationLevel[]
         dbs_result = LipidAnnotationLevel[]
         checkdb = false
-    elseif any(x -> iszero(x % 3), dbs)
+    elseif ispropertyposition(dbs) && any(x -> last.(x) == EZConfiguration(), dbs)
         dbs_certain = [dbpositionpartiallevel]
         dbs_result = [dbpositionlevel]
     else
@@ -212,8 +213,31 @@ function annotationchain(chain::CarbonChain)
         dbs_result = [dbpositionlevel, dbconfiglevel]
     end
     sub = chain.substituent
-    if sub isa Vector{<: Pair{UInt8, <: AbstractFunctionalGroup}} 
-        sub_result = [structuredefinedlevel, structurepositionlevel]
+    chi = chain.chirality
+    if ispropertyempty(sub) 
+        sub_result = [structuredefinedpartiallevel, structuredefinedlevel, structurepositionpartiallevel, structurepositionlevel, structureconfigpartiallevel, structureconfiglevel]
+    elseif ispropertychirality(sub, chi)
+        sub_result = ispropertypartialposition(sub) ? [structuredefinedlevel] : ispropertypartialchirality(sub, chi) ? [structuredefinedlevel, structurepositionlevel] : [structuredefinedlevel, structurepositionlevel, structureconfiglevel]
+        checksub = true
+        for (p, m) in sub
+            if checksub || checkdb
+                il = annotationchain(parentchemical(m))
+                # i = findfirst(x -> first(x) == p, chain.chirality)
+                # if isnothing(i) || last(chain.chirality[i]) == RSChirality()
+                #     intersect!(il, [fullstructurelevel, structurepositionlevel, structurepositionpartiallevel, structuredefinedlevel, structuredefinedpartiallevel, dbconfiglevel, dbconfigpartiallevel, dbpositionlevel, dbpositionpartiallevel, passsnpositionlevel, snpositionlevel, passphosphatepositionlevel, phosphatepositionlevel, molecularspecieslevel, specieslevel])
+                # end
+            else
+                break 
+            end
+            checksub && intersect!(sub_result, il)
+            checkdb && intersect!(dbs_result, il)
+            checksub = checksub && length(sub_result) > 0
+        end
+        push!(sub_result, structuredefinedpartiallevel)
+        ispropertypartialposition(sub) || push!(sub_result, structurepositionpartiallevel)
+        ispropertypartialchirality(sub, chi) || push!(sub_result, structureconfigpartiallevel)
+    elseif ispropertyposition(sub)
+        sub_result = ispropertypartialposition(sub) ? [structuredefinedlevel] : [structuredefinedlevel, structurepositionlevel]
         checksub = true
         for (p, m) in sub
             if checksub || checkdb
@@ -226,9 +250,7 @@ function annotationchain(chain::CarbonChain)
             checksub = checksub && length(sub_result) > 0
         end
         push!(sub_result, structuredefinedpartiallevel)
-        push!(sub_result, structurepositionpartiallevel)
-    elseif isnothing(sub) || isempty(sub)
-        sub_result = [structuredefinedpartiallevel, structuredefinedlevel, structurepositionpartiallevel, structurepositionlevel]
+        ispropertypartialposition(sub) || push!(sub_result, structurepositionpartiallevel)
     else
         if any(x -> first(x) isa UnknownGroup, sub)
             sub_certain = LipidAnnotationLevel[]
@@ -251,7 +273,9 @@ function annotationchain(chain::CarbonChain)
         union!(sub_result, sub_certain)
     end
     union!(dbs_result, dbs_certain)
-    if structurepositionlevel in sub_result && dbconfiglevel in dbs_result
+    if structureconfiglevel in sub_result && dbconfiglevel in dbs_result
+        union(sub_result, dbs_result, [specieslevel, molecularspecieslevel, passphosphatepositionlevel, phosphatepositionlevel, passsnpositionlevel, snpositionlevel, fullstructurelevel, completestructurelevel])
+    elseif structurepositionlevel in sub_result && dbconfiglevel in dbs_result
         union(sub_result, dbs_result, [specieslevel, molecularspecieslevel, passphosphatepositionlevel, phosphatepositionlevel, passsnpositionlevel, snpositionlevel, fullstructurelevel])
     else
         union(sub_result, dbs_result, [specieslevel, molecularspecieslevel, passphosphatepositionlevel, phosphatepositionlevel, passsnpositionlevel, snpositionlevel])
@@ -261,6 +285,7 @@ end
 function annotationchain(dc::Union{DehydratedChemical, Glycan})
     chain = intersect(annotationchain.(getchaincomponent(dc))...)
     ip = findall(>=(structurepositionpartiallevel), chain)
+    jp = findall(>=(structureconfigpartiallevel), chain)
     isempty(ip) && return chain
     for ((a, b), l) in zip(IterTools.partition(getchaincomponent(dc), 2), getchainlinkage(dc))
         pa = dehydroxyposition(a)
@@ -273,6 +298,9 @@ function annotationchain(dc::Union{DehydratedChemical, Glycan})
             deleteat!(chain, ip)
             break
         end
+    end
+    if dc isa Glycan && any(l -> first(l) isa Anomerposition, getchainlinkage(dc))
+        deleteat!(chain, jp)
     end
     trim_level_gap!(chain)
 end
@@ -332,7 +360,24 @@ annotationchain(c::GlyComp) = [
     molecularspecieslevel, 
     specieslevel
 ]
-annotationchain(c::T) where {S <: Nothing, T <: Monosaccharide{S}} = [
+annotationchain(c::T) where {D <: DLForm, P, S <: Nothing, T <: Monosaccharide{D, P, S}} = [
+    fullstructurelevel,
+    structurepositionlevel,
+    structurepositionpartiallevel,
+    structuredefinedlevel,
+    structuredefinedpartiallevel,
+    dbconfiglevel,
+    dbconfigpartiallevel,
+    dbpositionlevel,
+    dbpositionpartiallevel,
+    passsnpositionlevel,
+    snpositionlevel,
+    passphosphatepositionlevel,
+    phosphatepositionlevel,
+    molecularspecieslevel,
+    specieslevel
+]
+annotationchain(c::T) where {D, P, S <: Nothing, T <: Monosaccharide{D, P, S}} = [
     completestructurelevel,
     fullstructurelevel,
     structureconfiglevel,
@@ -352,20 +397,20 @@ annotationchain(c::T) where {S <: Nothing, T <: Monosaccharide{S}} = [
     molecularspecieslevel,
     specieslevel
 ] 
-function annotationchain(c::T) where {S <: Vector{<: Pair{<: FunctionalGroup, UInt8}}, T <: Monosaccharide{<: S}}
-    if any(x -> first(x) == Phosphate(), c.substituent)
+function annotationchain(c::T) where {D, P, S <: Vector{<: Pair{<: FunctionalGroup, UInt8}}, T <: Monosaccharide{D, P, <: S}}
+    if any(x -> first(x) isa Phosphoryl, c.substituent)
         [
-        structuredefinedlevel,
-        structuredefinedpartiallevel,
-        dbconfiglevel,
-        dbconfigpartiallevel,
-        dbpositionlevel,
-        dbpositionpartiallevel,
-        passsnpositionlevel,
-        snpositionlevel,
-        molecularspecieslevel,
-        specieslevel
-    ]
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ]
     else
         [
         structuredefinedlevel,
@@ -384,7 +429,57 @@ function annotationchain(c::T) where {S <: Vector{<: Pair{<: FunctionalGroup, UI
     end 
 end
 
-function annotationchain(c::T) where {S <: Vector{<: Pair{UInt8, <: FunctionalGroup}}, T <: Monosaccharide{<: S}}
+function annotationchain(c::T) where {D <: DLForm, P, S <: Vector{<: Pair{UInt8, <: FunctionalGroup}}, T <: Monosaccharide{D, P, <: S}}
+    i = findall(x -> first(x) == 0, c.substituent)
+    if isempty(i)
+        [
+            fullstructurelevel,
+            structurepositionlevel,
+            structurepositionpartiallevel,
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            passphosphatepositionlevel,
+            phosphatepositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ] 
+    elseif any(j -> last(c.substituent[j]) == Phsphate(), i)
+        [
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ]
+    else
+        [
+            structuredefinedlevel,
+            structuredefinedpartiallevel,
+            dbconfiglevel,
+            dbconfigpartiallevel,
+            dbpositionlevel,
+            dbpositionpartiallevel,
+            passsnpositionlevel,
+            snpositionlevel,
+            passphosphatepositionlevel,
+            phosphatepositionlevel,
+            molecularspecieslevel,
+            specieslevel
+        ]
+    end
+end
+function annotationchain(c::T) where {D, P, S <: Vector{<: Pair{UInt8, <: FunctionalGroup}}, T <: Monosaccharide{D, P, <: S}}
     i = findall(x -> first(x) == 0, c.substituent)
     if isempty(i)
         [
@@ -438,11 +533,68 @@ function annotationchain(c::T) where {S <: Vector{<: Pair{UInt8, <: FunctionalGr
     end
 end
 
-annotationchain(c::AbstractPeptide) = [
+annotationchain(c::Peptide) = intersect(annotationchain.(getchaincomponent(c))...)
+annotationchain(c::αAminoAcid{T}) where {T <: DLForm} = [
+    fullstructurelevel,
+    structurepositionlevel,
+    structurepositionpartiallevel,
+    structuredefinedlevel,
+    structuredefinedpartiallevel,
+    dbconfiglevel,
+    dbconfigpartiallevel,
+    dbpositionlevel,
+    dbpositionpartiallevel,
+    passsnpositionlevel,
+    snpositionlevel,
+    passphosphatepositionlevel,
+    phosphatepositionlevel,
+    molecularspecieslevel,
+    specieslevel
+]
+
+annotationchain(c::αAminoAcid{T}) where T = [
     completestructurelevel,
     fullstructurelevel,
     structureconfiglevel,
     structureconfigpartiallevel,
+    structurepositionlevel,
+    structurepositionpartiallevel,
+    structuredefinedlevel,
+    structuredefinedpartiallevel,
+    dbconfiglevel,
+    dbconfigpartiallevel,
+    dbpositionlevel,
+    dbpositionpartiallevel,
+    passsnpositionlevel,
+    snpositionlevel,
+    passphosphatepositionlevel,
+    phosphatepositionlevel,
+    molecularspecieslevel,
+    specieslevel
+]
+
+annotationchain(::Union{Carnitine, LacticAcid, Glycerol}) = [
+    completestructurelevel,
+    fullstructurelevel,
+    structureconfiglevel,
+    structureconfigpartiallevel,
+    structurepositionlevel,
+    structurepositionpartiallevel,
+    structuredefinedlevel,
+    structuredefinedpartiallevel,
+    dbconfiglevel,
+    dbconfigpartiallevel,
+    dbpositionlevel,
+    dbpositionpartiallevel,
+    passsnpositionlevel,
+    snpositionlevel,
+    passphosphatepositionlevel,
+    phosphatepositionlevel,
+    molecularspecieslevel,
+    specieslevel
+]
+annotationchain(::Union{Carnitine{L}, LacticAcid{L}, Glycerol{L}}) where {L <: Union{RSChirality, DLForm}} = [
+    fullstructurelevel,
     structurepositionlevel,
     structurepositionpartiallevel,
     structuredefinedlevel,
@@ -490,9 +642,9 @@ function testphosphatepositionlevel(c::Union{Phosphatidylinositol, Lysophosphati
         n = 0
         p = String[]
         for i in first(getchaincomponent(c.backbone)).substituent
-            if i isa Phosphate
+            if i isa Pair && first(i) isa Phosphoryl
                 n += 1
-            elseif i isa Pair && last(i) isa Phosphate
+            elseif i isa Pair && last(i) isa Phosphoryl
                 n += 1
                 push!(p, string(Int(first(i)), "'"))
             end

@@ -3,7 +3,7 @@ using Reexport
 using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
 import MassSpecChemicals: getchemicalattr
-import ..MassSpecBioChemicals: dehydroxyposition, dehydrogenposition, leavinggroup, leavinggroupelements
+import ..MassSpecBioChemicals: dehydroxyposition, dehydrogenposition, leavinggroup, leavinggroupelements, dehydrogengroup, dehydroxygroup, isdissociated, nlinkage
 export BasicCompound, 
        isdissociated,
        Dihydrogen,
@@ -55,15 +55,15 @@ export BasicCompound,
        HydrogenCyanide, 
        Cyano, # CN
        PhosphoricAcid, # P
-       Phosphate, # P/MP
+       Phosphoryl, # P/MP
        DiphosphoricAcid, 
-       Diphosphate, # DP
+       Diphosphoryl, # DP
        TriphosphoricAcid, 
-       Triphosphate, # TP
+       Triphosphoryl, # TP
        SulfuricAcid, # S
-       Sulfate, # S
-       SulfurousAcid, 
-       Sulfite,
+       Sulfo, # S
+       # Sulfate, 
+       SulfonicAcid, 
        NitricAcid, 
        Nitro # NO2
 
@@ -118,15 +118,14 @@ struct Sulfanyl <: FunctionalGroup{HydrogenSulfide, Dehydrogen} end # SH
 struct HydrogenCyanide <: BasicCompound end
 struct Cyano <: FunctionalGroup{HydrogenCyanide, Dehydrogen} end # CN
 struct PhosphoricAcid <: BasicCompound end # P
-struct Phosphate <: FunctionalGroup{PhosphoricAcid, Dehydroxy} end # P/MP
+struct Phosphoryl <: FunctionalGroup{PhosphoricAcid, Dehydroxy} end # P/MP
 struct DiphosphoricAcid <: BasicCompound end
-struct Diphosphate <: FunctionalGroup{DiphosphoricAcid, Dehydroxy} end # DP
+struct Diphosphoryl <: FunctionalGroup{DiphosphoricAcid, Dehydroxy} end # DP
 struct TriphosphoricAcid <: BasicCompound end
-struct Triphosphate <: FunctionalGroup{TriphosphoricAcid, Dehydroxy} end # TP
+struct Triphosphoryl <: FunctionalGroup{TriphosphoricAcid, Dehydroxy} end # TP
 struct SulfuricAcid <: BasicCompound end # S
-struct Sulfate <: FunctionalGroup{SulfuricAcid, Dehydroxy} end # S
-struct SulfurousAcid <: BasicCompound end
-struct Sulfite <: FunctionalGroup{SulfurousAcid, Dehydroxy} end
+struct Sulfo <: FunctionalGroup{SulfuricAcid, Dehydroxy} end # S
+# struct Sulfate <: FunctionalGroup{SulfuricAcid, Dehydrogen} end 
 struct NitricAcid <: BasicCompound end
 struct Nitro <: FunctionalGroup{NitricAcid, Dehydroxy} end # NO2
 
@@ -152,7 +151,6 @@ getchemicalattr(::PhosphoricAcid, ::Val{:name}; kwargs...) = "Phosphoric acid"
 getchemicalattr(::DiphosphoricAcid, ::Val{:name}; kwargs...) = "Diphosphoric acid"
 getchemicalattr(::TriphosphoricAcid, ::Val{:name}; kwargs...) = "Triphosphoric acid" 
 getchemicalattr(::SulfuricAcid, ::Val{:name}; kwargs...) = "Sulfuric acid"
-getchemicalattr(::SulfurousAcid, ::Val{:name}; kwargs...) = "Sulfurous acid"
 getchemicalattr(::NitricAcid, ::Val{:name}; kwargs...) = "Nitric acid"
 
 getchemicalattr(::Dihydrogen, ::Val{:formula}; kwargs...) = "H2"
@@ -177,7 +175,6 @@ getchemicalattr(::PhosphoricAcid, ::Val{:formula}; kwargs...) = "H3PO4"
 getchemicalattr(::DiphosphoricAcid, ::Val{:formula}; kwargs...) = "H4P2O7"
 getchemicalattr(::TriphosphoricAcid, ::Val{:formula}; kwargs...) = "H5P3O10" 
 getchemicalattr(::SulfuricAcid, ::Val{:formula}; kwargs...) = "H2SO4"
-getchemicalattr(::SulfurousAcid, ::Val{:formula}; kwargs...) = "H2SO3"
 getchemicalattr(::NitricAcid, ::Val{:formula}; kwargs...) = "HNO3"
 
 getchemicalattr(::Dihydrogen, ::Val{:SMILES}; kwargs...) = "[H2]"
@@ -202,7 +199,6 @@ getchemicalattr(::PhosphoricAcid, ::Val{:SMILES}; kwargs...) = "OP(=O)(O)O"
 getchemicalattr(::DiphosphoricAcid, ::Val{:SMILES}; kwargs...) = "OP(=O)(O)OP(=O)(O)O"
 getchemicalattr(::TriphosphoricAcid, ::Val{:SMILES}; kwargs...) = "OP(=O)(O)OP(=O)(O)OP(=O)(O)O" 
 getchemicalattr(::SulfuricAcid, ::Val{:SMILES}; kwargs...) = "OS(=O)(=O)O"
-getchemicalattr(::SulfurousAcid, ::Val{:SMILES}; kwargs...) = "OS(=O)O"
 getchemicalattr(::NitricAcid, ::Val{:SMILES}; kwargs...) = "O[N+](=O)[O-]"
 
 getchemicalattr(::Hydrogen, ::Val{:abbreviation}; kwargs...) = "H"
@@ -234,13 +230,13 @@ getchemicalattr(::Amino, ::Val{:abbreviation}; kwargs...) = "NH2"
 getchemicalattr(::NLinkage, ::Val{:abbreviation}; kwargs...) = "N"
 getchemicalattr(::Sulfanyl, ::Val{:abbreviation}; kwargs...) = "SH"
 getchemicalattr(::Cyano, ::Val{:abbreviation}; kwargs...) = "CN"
-getchemicalattr(::Phosphate, ::Val{:abbreviation}; kwargs...) = "P"
-getchemicalattr(::Diphosphate, ::Val{:abbreviation}; kwargs...) = "DP"
-getchemicalattr(::Triphosphate, ::Val{:abbreviation}; kwargs...) = "TP"
-getchemicalattr(::Sulfate, ::Val{:abbreviation}; kwargs...) = "S"
-getchemicalattr(::Sulfite, ::Val{:abbreviation}; kwargs...) = "HSO3"
+getchemicalattr(::Phosphoryl, ::Val{:abbreviation}; kwargs...) = "P"
+getchemicalattr(::Diphosphoryl, ::Val{:abbreviation}; kwargs...) = "DP"
+getchemicalattr(::Triphosphoryl, ::Val{:abbreviation}; kwargs...) = "TP"
+getchemicalattr(::Sulfo, ::Val{:abbreviation}; kwargs...) = "S"
+# getchemicalattr(::Sulfate, ::Val{:abbreviation}; kwargs...) = "OSO3"
 getchemicalattr(::Nitro, ::Val{:abbreviation}; kwargs...) = "NO2"
-getchemicalattr(x::T, ::Val{:name}; kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = string(T, " Group")
+getchemicalattr(x::T, ::Val{:name}; group = true, kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = group ? string(T, " Group") : string(T)
 getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = vcat(chemicalelements(parentchemical(x)), leavinggroupelements(leavinggroup(x)))
 
 getchemicalattr(::Hydrogen, ::Val{:SMILES}; kwargs...) = "(H)"
@@ -267,16 +263,16 @@ getchemicalattr(::Oxo, ::Val{:SMILES}; kwargs...) = "(=O)"
 getchemicalattr(::Alkoxy, ::Val{:SMILES}; kwargs...) = "O"
 getchemicalattr(::Hydroperoxyl, ::Val{:SMILES}; kwargs...) = "(OO)"
 getchemicalattr(::Epoxy, ::Val{:SMILES}; kwargs...) = "(O1)X1"
-getchemicalattr(::Peroxy, ::Val{:SMILES}; kwargs...) = "OO"
+getchemicalattr(::Peroxy, ::Val{:SMILES}; kwargs...) = "(OO1)X1"
 getchemicalattr(::Amino, ::Val{:SMILES}; kwargs...) = "(N)"
 getchemicalattr(::NLinkage, ::Val{:SMILES}; kwargs...) = "N"
 getchemicalattr(::Sulfanyl, ::Val{:SMILES}; kwargs...) = "(S)"
 getchemicalattr(::Cyano, ::Val{:SMILES}; kwargs...) = "(C#N)"
-getchemicalattr(::Phosphate, ::Val{:SMILES}; kwargs...) = "(OP(=O)(O)O)"
-getchemicalattr(::Diphosphate, ::Val{:SMILES}; kwargs...) = "(OP(=O)(O)OP(=O)(O)O)"
-getchemicalattr(::Triphosphate, ::Val{:SMILES}; kwargs...) = "(OP(=O)(O)OP(=O)(O)OP(=O)(O)O)"
-getchemicalattr(::Sulfate, ::Val{:SMILES}; kwargs...) = "(OS(=O)(=O)O)"
-getchemicalattr(::Sulfite, ::Val{:SMILES}; kwargs...) = "(OS(=O)O)"
+getchemicalattr(::Phosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)O)"
+getchemicalattr(::Diphosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)OP(=O)(O)O)"
+getchemicalattr(::Triphosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)OP(=O)(O)OP(=O)(O)O)"
+getchemicalattr(::Sulfo, ::Val{:SMILES}; kwargs...) = "(S(=O)(=O)O)"
+# getchemicalattr(::Sulfate, ::Val{:SMILES}; kwargs...) = "(OS(=O)(=O)O)"
 getchemicalattr(::Nitro, ::Val{:SMILES}; kwargs...) = "([N+](=O)[O-])"
 
 isdissociated(::Hydrogen) = false
@@ -308,11 +304,10 @@ isdissociated(::Amino) = true
 isdissociated(::NLinkage) = true
 isdissociated(::Sulfanyl) = true
 isdissociated(::Cyano) = false
-isdissociated(::Phosphate) = true
-isdissociated(::Diphosphate) = true
-isdissociated(::Triphosphate) = true
-isdissociated(::Sulfate) = true
-isdissociated(::Sulfite) = true
+isdissociated(::Phosphoryl) = true
+isdissociated(::Diphosphoryl) = true
+isdissociated(::Triphosphoryl) = true
+isdissociated(::Sulfo) = true
 isdissociated(::Nitro) = false
 
 dehydrogenposition(::BasicCompound) = nothing
@@ -325,7 +320,39 @@ dehydroxyposition(::PhosphoricAcid) = nothing
 dehydroxyposition(::DiphosphoricAcid) = nothing
 dehydroxyposition(::TriphosphoricAcid) = nothing
 dehydroxyposition(::SulfuricAcid) = nothing
-dehydroxyposition(::SulfurousAcid) = nothing
 dehydroxyposition(::NitricAcid) = nothing
+
+dehydrogengroup(::Dihydrogen; position = nothing) = Hydrogen()
+dehydrogengroup(::Ethane; position = nothing) = Ethyl()
+dehydrogengroup(::Ethanol; position = nothing) = Ethoxy()
+dehydrogengroup(::Methane; position = nothing) = Methyl()
+dehydrogengroup(::Methanol; position = nothing) = Methoxy()
+dehydroxygroup(::FormicAcid; position = nothing) = Formyl()
+dehydrogengroup(::FormicAcid; position = nothing) = Oformyl()
+dehydrogengroup(::Formamide; position = nothing) = Nformyl()
+dehydroxygroup(::AceticAcid; position = nothing) = Acetyl()
+dehydrogengroup(::AceticAcid; position = nothing) = Oacetyl()
+dehydrogengroup(::Acetamide; position = nothing) = Nacetyl()
+dehydrogengroup(::HydrogenBromide; position = nothing) = Bromo()
+dehydrogengroup(::HydrogenChloride; position = nothing) = Chloro()
+dehydrogengroup(::HydrogenFluoride; position = nothing) = Fluoro()
+dehydrogengroup(::HydrogenIodide; position = nothing) = Iodo()
+dehydrogengroup(::HydrogenOxide; position = nothing) = Hydroxy()
+dehydrogengroup(::HydrogenPeroxide; position = nothing) = Hydroperoxyl()
+dehydrogengroup(::Ammonia; position = nothing) = Amino()
+dehydrogengroup(::HydrogenSulfide; position = nothing) = Sulfanyl()
+dehydrogengroup(::HydrogenCyanide; position = nothing) = Cyano()
+dehydroxygroup(::PhosphoricAcid; position = nothing) = Phosphoryl()
+dehydroxygroup(::DiphosphoricAcid; position = nothing) = Diphosphoryl()
+dehydroxygroup(::TriphosphoricAcid; position = nothing) = Triphosphoryl()
+dehydroxygroup(::SulfuricAcid; position = nothing) = Sulfo()
+# dehydrogengroup(::SulfuricAcid; position = nothing) = Sulfate()
+dehydroxygroup(::NitricAcid; position = nothing) = Nitro()
+
+nlinkage(::CarboxylicAcidGroup) = 3
+nlinkage(::Alkoxy) = 1
+nlinkage(::Epoxy) = 1
+nlinkage(::Peroxy) = 1
+nlinkage(::XLinkedFunctionalGroup{CarboxylicLinkage}) = 3
 
 end

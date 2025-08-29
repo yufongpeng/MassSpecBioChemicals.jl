@@ -1,30 +1,52 @@
 include("class_struct.jl")
-function parse_lipid(s::AbstractString)
-    any(==(s), SPECIFIC_LIPID) && return parse_specific(s)
-    headclspossil, schain = split_class_chain(s)
-    headcls, pos, sil = match(r"^(.*?)[\s^\[]*(\([\d\,'\s]+\))?\s*(\[[^\]\[]+\])?$", headclspossil)
-    result = nothing
-    cls = ""
-    for (c, o) in REGEX[:class]
-        result = match(c, string(headcls))
-        isnothing(result) || (cls = string(o); break)
+
+parse_chemical(::Type{T}, s; kwargs...) where {T <: AbstractLipid} = parse_lipid(s; lipidtype = T, kwargs...)
+
+function parse_lipid(s::AbstractString; lipidtype = AbstractLipid, kwargs...)
+    if lipidtype <: LipidChemical 
+        return LipidChemical(parse_chemical(Chemical, s; kwargs...))
     end
-    isnothing(result) && throw(ArgumentError("Invalid lipid class"))
-    head, pre, post = result
-    head = isnothing(head) ? nothing : isempty(head) ? nothing : head
-    pre = isnothing(pre) ? nothing : isempty(pre) ? nothing : pre
-    post = isnothing(post) ? nothing : isempty(post) ? nothing : post
-    parse_head = get(CLASS_STRUCT, cls, nothing)
-    Con, bone, echain = parse_head(head, pre, cls, post, pos, sil)
-    chain, sn = parse_carbonchain(Con, bone, echain, schain)
-    make_lipid(Con, bone, pos, chain, sn)
+    try 
+        if any(==(s), SPECIFIC_LIPID) 
+            lipid =  parse_specific(s)
+            lipid isa lipidtype || throw(ArgumentError("The input string cannot be parsed as `$T`"))
+            return lipid 
+        end
+        headclspossil, schain = split_class_chain(s)
+        headcls, pos, sil = split_head_sil(headclspossil)
+        result = nothing
+        cls = ""
+        for (c, o) in REGEX[:class]
+            result = match(c, string(headcls))
+            isnothing(result) || (cls = string(o); break)
+        end
+        isnothing(result) && throw(ArgumentError("Invalid lipid class"))
+        head, pre, post = result
+        head = isnothing(head) ? nothing : isempty(head) ? nothing : head
+        pre = isnothing(pre) ? nothing : isempty(pre) ? nothing : pre
+        post = isnothing(post) ? nothing : isempty(post) ? nothing : post
+        parse_head = get(CLASS_STRUCT, cls, nothing)
+        Con, bone, echain = parse_head(head, pre, cls, post, pos, sil)
+        Con <: lipidtype || throw(ArgumentError("The input string cannot be parsed as `$lipidtype`"))
+        chain, sn = parse_carbonchain(Con, bone, echain, schain)
+        make_lipid(Con, bone, pos, chain, sn)
+    catch e 
+        if lipidtype <: AbstractLipid
+            throw(e)
+            @warn "Construct generic `LipidChemical` instead" 
+            LipidChemical(parse_chemical(Chemical, s; kwargs...))
+        else
+            throw(e)
+        end
+    end
 end
-# match(r"([\s,/,_][d,t,e]?[P,O]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^;\(/_]*(?:\([^)(]*+(?:(?1)[^)(]*)*+\))?[^;/_]*)*)", s)
-# cbdb, pos, fg = match(r"[/,_]?([d,t,e]?[P,O]?-?\d*:\d*)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^;\(/_]*(?:\([^)(]*+(?:(?1)[^)(]*)*+\))?[^;/_]*)*)", s)
+# match(r"([\s,/,_](?:\[[RS]\])*[d,t,e]?[P,O,E]?-?\d+:\d+)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^;\(/_]*(?:\([^)(]*+(?:(?1)[^)(]*)*+\))?[^;/_]*)*)", s)
+# cbdb, pos, fg = match(r"[/,_]?((?:\[[RS]\])*[d,t,e]?[P,O,E]?-?\d*:\d*)(\([^)(]*+(?:(?1)[^)(]*)*+\))?(\[[^\[]+\])?((?:;[^;\(/_]*(?:\([^)(]*+(?:(?1)[^)(]*)*+\))?[^;/_]*)*)", s)
 
 include("parse_group.jl")
 include("parse_carbonchain.jl")
 include("parse_chainmodification.jl")
+include("check_configuration.jl")
 
 """
     parse_specific(s)
@@ -42,6 +64,7 @@ Split string into class and chain
 function split_class_chain(s)
     p = false
     e = 0
+    f = lastindex(s)
     dp = 0
     db = 0
     for i in eachindex(s)
@@ -49,8 +72,10 @@ function split_class_chain(s)
         if dp == 0 && db == 0 && x == ' '
             p = true
             e = i
+            f = min(f, e)
             continue
-        elseif dp == 0 && db == 0 && p && isnothing(match(r"(?:[dte]?[OP]-)?\d+:\d+", s[i:end]))
+        # elseif dp == 0 && db == 0 && p && isnothing(match(r"^(?:[dte]?[OPE]-)?\d+:\d+", s[i:end]))
+        elseif dp == 0 && db == 0 && p
             break
         end
         p = false
@@ -62,8 +87,16 @@ function split_class_chain(s)
             _   => () 
         end
     end
-    s[firstindex(s):e - 1], s[e:lastindex(s)]
+    e == 0 && return ("", string(' ', s))
+    pcl = s[firstindex(s):prevind(s, f)]
+    pch = s[nextind(s, e):lastindex(s)]
+    ncl, nch = split_class_chain(pch)
+    (isempty(ncl) ? pcl : string(pcl, " ", ncl), nch)
 end
+
+"""
+"""
+split_head_sil(s) = match(r"^(.*?)[\s^\[]*(\([DLRS\d\,'\s]+\))?\s*(\[[^\]\[]+\])?$", s)
 
 """
     make_lipid(Con, bone, pos, chain, sn)
@@ -71,19 +104,21 @@ end
 Construct lipids from parsed information
 """
 function make_lipid(Con::Type{<: FattyAcyl}, bone, pos, chain, sn)
-    Con(bone, first(chain))
+    Con(bone, check_configuration!(bone, first(chain)))
 end
 
 function make_lipid(Con::Type{<: NacylAmine}, bone, pos, chain, sn)
     if bone isa Tuple
         if length(chain) == 1
-            Con(parse_lipid("FN 0:0"), first(chain))
+            hbone = parse_lipid("FN 0:0")
+            Con(hbone, check_configuration!(hbone, first(chain)))
         else length(chain) == nchainposition(Con)        
             bhead, bbone, bechain = bone
-            Con(make_lipid(bhead, bbone, nothing, [first(chain)], 0x00), last(chain))
+            hbone = make_lipid(bhead, bbone, nothing, [first(chain)], 0x00)
+            Con(hbone, check_configuration!(hbone, last(chain)))
         end
     else
-        Con(bone, first(chain))
+        Con(bone, check_configuration!(bone, first(chain)))
     end
 end
 
@@ -91,140 +126,207 @@ function make_lipid(Con::Type{<: FattyAcylEster}, bone, pos, chain, sn)
     bhead, bbone, bechain = bone
     if length(chain) == 1
         if bechain == (Acyl, )
-            Con(parse_lipid("FA 0:0"), first(chain), sn)
+            hbone = parse_lipid("FA 0:0")
         else
-            Con(parse_lipid("FOH 0:0"), first(chain), sn)
+            hbone = parse_lipid("FOH 0:0")
         end
-    elseif length(chain) == nchainposition(Con)        
-        Con(make_lipid(bhead, bbone, nothing, [first(chain)], 0x00), last(chain), sn)
+        Con(hbone, check_configuration!(hbone, first(chain)), sn)
+    elseif length(chain) == nchainposition(Con)     
+        hbone = make_lipid(bhead, bbone, nothing, [first(chain)], 0x00)
+        Con(hbone, check_configuration!(hbone, last(chain)), sn)
     else
         throw(ArgumentError("Invalid lipid name"))
     end
 end
 
+# Radylglycerophosphoglycerol Single -> Tuple
 function make_lipid(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospholipid}}, bone, pos, chain, sn)
-    Con(bone, chain, sn)
+    ch = class_rs(bone)
+    if length(ch) == 1
+        ch = first(ch)
+    else
+        ch = (reverse!(ch)..., )
+    end
+    for c in tuplize(chain)
+        check_configuration!.(Ref(bone), c)
+        if ispropertyposition(c.doublebond) && any(x -> first(x) == 0x00, c.doublebond)
+            throw(ArgumentError("Position `1` cannot contain double bond."))
+        end
+    end
+    Con(bone, chain, sn, ch)
 end
 
 function make_lipid(Con::Type{<: GlycerophosphoNacylethanolamine}, bone, pos, chain, sn)
-    Con(bone, chain)
+    ch = class_rs(bone)
+    if length(ch) == 1
+        ch = first(ch)
+    else
+        ch = (reverse!(ch)..., )
+    end
+    Con(bone, check_configuration!.(Ref(bone), chain), ch)
+end
+
+function parse_headposition(x)
+    p, c = x 
+    parse(UInt8, p) => isempty(c) ? RSChirality() : c == "R" ? RChirality() : c == "S" ? SChirality() : throw(ArgumentError("Invalid chirality."))
 end
 
 function make_lipid(Con::Type{<: SphingoBone}, bone, pos, chain, sn)
-    if isnothing(pos) || bone isa GlyComp
-        poss = [0x00]
+    bone_species = false
+    if isnothing(pos) || isnothing(bone) || bone isa GlyComp
+        poss = Pair{UInt8, RSSystem}[0x00 => RSChirality()]
+        bone_species = true
     else
-        poss = [parse(UInt8, x.match) for x in collect(eachmatch(r"\d+", pos))]
+        poss = Pair{UInt8, RSSystem}[parse_headposition(x) for x in eachmatch(r"(\d+)([RS]*)", pos)]
     end
     fc = first(chain)
-    lv = annotationlevel(fc; partial = true, additional = true, pass = true)
-    if isnothing(bone) || specieslevel in lv || molecularspecieslevel in lv
-        all(iszero, poss) || throw(ArgumentError("Headgroup position cannot be specified at (molecular)specieslevel or without headgroup(s)"))
-        nothing
-    elseif any(>=(structurepositionpartiallevel), lv)
+    chain_species = fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
+    if bone_species && chain_species || isnothing(bone)
+        check_configuration!(bone, fc) 
+        chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
+    elseif chain_species
+        all(iszero ∘ first, poss) || throw(ArgumentError("Headgroup position cannot be specified at (molecular)specieslevel or without headgroup(s)"))
+        check_configuration!(bone, fc) 
+        chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
+    elseif ispropertyposition(fc.substituent) || (isnothing(fc.substituent) && any(!iszero ∘ first, poss))
         if isnothing(fc.substituent)
-            sub = Pair{UInt8, Hydroxy}[]
-        elseif !isa(Hydroxy(), eltype(fc.substituent).parameters[end])
+            sub = Pair{UInt8, AbstractFunctionalGroup}[]
+        elseif XLinkedFunctionalGroup <: eltype(fc.substituent).parameters[end]
+            sub = fc.substituent
+        else
             sub = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, fc.substituent)
+        end
+        for p in poss
+            push!(sub, first(p) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)))
+        end
+        sort_chainmodification!(sub) 
+        if (0x02 => Hydrogen()) in sub 
+            ch = vcat(fc.chirality, poss) 
         else
-            sub = fc.substituent
+            push!(sub, 0x02 => Hydrogen())
+            ch = vcat(fc.chirality, poss, [0x02 => RSChirality()]) 
         end
-        for i in poss
-            push!(sub, UInt(i) => Hydroxy())
-        end
-        sort_chainmodification!(sub)
-        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, fc.isotopiclabel)
-    elseif any(>=(structuredefinedpartiallevel), lv) # add o
+        # check poss chirality
+        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, ch, fc.isotopiclabel)
+        check_configuration!(bone, fc) 
+        chi = [last(fc.chirality[findfirst(x -> first(x) == p, fc.chirality)]) for (p, _) in poss]
+        chi = length(chi) == 1 ? first(chi) : (chi..., )
+    elseif ispropertynumber(fc.substituent) || isnothing(fc.substituent)
         if isnothing(fc.substituent)
-            sub = Pair{Hydroxy, UInt8}[]
-        elseif !isa(Hydroxy(), eltype(fc.substituent).parameters[begin])
-            sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
+            sub = Pair{XLinkedFunctionalGroup, UInt8}[]
         else
-            sub = fc.substituent
+            sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
         end
-        for i in eachindex(poss)
-            id = findfirst(x -> first(x) == Hydroxy(), fc.substituent)
-            if isnothing(id)
-                push!(sub, Hydroxy() => 0x01)
-                sort_chainmodification!(sub)
-            else
-                n = last(sub[id])
-                sub[id] = Hydroxy() => (n + 0x01)
-            end
+        m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone))
+        id = findfirst(x -> first(x) == m, fc.substituent)
+        if isnothing(id)
+            push!(sub, m => UInt8(length(poss)))
+        else
+            n = last(sub[id])
+            sub[id] = m => (n + UInt8(length(poss)))
         end
         sort_chainmodification!(sub)
-        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, fc.isotopiclabel)
-    elseif any(in(lv), [snpositionlevel, passsnpositionlevel, phosphatepositionlevel, passphosphatepositionlevel])
-        all(iszero, poss) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
-        nothing
+        headposition = [first(p) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)) for p in poss]
+        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, poss, fc.isotopiclabel)
+        check_configuration!(bone, fc; headposition) 
+        chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
     else
         throw(ArgumentError("Unknown headgroup position when \"OH\"'s positions are known"))
     end
     if length(poss) == 1
-        pos = first(poss)
+        enpos = first(first(poss))
     elseif length(poss) == 2
-        pos = first(poss) * UInt8(32) + last(poss)
+        enpos = first(first(poss)) * UInt8(32) + first(last(poss))
     else
         throw(ArgumentError("Invalid headgroup position, \"$pos\""))
     end
-    Con(bone, length(chain) == 1 ? fc : (fc, chain[begin + 1:end]...), pos)
+    Con(bone, length(chain) == 1 ? fc : (fc, check_configuration!.(nothing, chain[begin + 1:end]...)), enpos, chi)
 end
 
 function make_lipid(Con::Type{<: MixSphingoBone}, bone, pos, chain, sn)
-    pos = isnothing(bone) ? UInt8[] : isnothing(pos) ? zeros(UInt8, length(bone)) : split_class_position(pos)
-    poss = vcat(collect.(pos)...)
+    bone_species = false
+    if isnothing(bone)
+        poss = UInt8[]
+        bone_species = true
+    elseif isnothing(pos)
+        poss = [[0x00 => RSChirality()] for i in eachindex(bone)]
+        bone_species = true
+    else
+        poss = [[parse_headposition(x) for x in eachmatch(r"(\d+)([RS]*)", p)] for p in split_class_position(pos)]
+    end
     fc = first(chain)
-    lv = annotationlevel(fc; partial = true, additional = true, pass = true)
-    if isnothing(bone) || specieslevel in lv || molecularspecieslevel in lv
-        all(iszero, poss) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
-        nothing
-    elseif any(>=(structurepositionpartiallevel), lv)
+    chain_species = fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
+    if bone_species && chain_species || isnothing(bone)
+        check_configuration!(bone, fc) 
+        chi = last.(first.(poss))
+    elseif chain_species
+        all(iszero ∘ first, vcat(poss...)) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
+        check_configuration!(bone, fc) 
+        chi = last.(first.(poss))
+    elseif ispropertyposition(fc.substituent) || (isnothing(fc.substituent) && any(x -> any(!iszero ∘ first, x), poss))
         if isnothing(fc.substituent)
-            sub = Pair{UInt8, Hydroxy}[]
-        elseif !isa(Hydroxy(), eltype(sub).parameters[end])
+            sub = Pair{UInt8, AbstractFunctionalGroup}[]
+        else
             sub = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, fc.substituent)
-        else
-            sub = fc.substituent
         end
-        for i in poss
-            push!(sub, UInt(i) => Hydroxy())
+        length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
+        for (b, p) in zip(bone, poss)
+            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
+            for x in p
+                push!(sub, first(x) => m)
+            end
         end
+        push!(sub, 0x02 => Hydrogen())
         sort_chainmodification!(sub)
-        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, fc.isotopiclabel)
-    elseif any(>=(structuredefinedpartiallevel), lv) 
+        ch = vcat(fc.chirality, poss..., [0x02 => RSChirality()]) 
+        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, ch, fc.isotopiclabel)
+        check_configuration!(bone, fc) 
+        chi = map(poss) do pos 
+            if length(pos) == 1
+                last(fc.chirality[findfirst(x -> first(x) == first(first(pos)), fc.chirality)])
+            else 
+                [last(fc.chirality[findfirst(x -> first(x) == first(p), fc.chirality)]) for p in pos]
+            end
+        end
+    elseif ispropertynumber(fc.substituent) || isnothing(fc.substituent)
         if isnothing(fc.substituent)
-            sub = Pair{Hydroxy, UInt8}[]
-        elseif !isa(Hydroxy(), eltype(sub).parameters[begin])
-            sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
+            sub = Pair{AbstractFunctionalGroup, UInt8}[]
         else
             sub = fc.substituent
         end
-        for i in eachindex(poss)
-            id = findfirst(x -> first(x) == Hydroxy(), fc.substituent)
+        length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
+        for (b, p) in zip(bone, poss)
+            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
+            id = findfirst(x -> first(x) == m, fc.substituent)
             if isnothing(id)
-                push!(sub, Hydroxy() => 0x01)
-                sort_chainmodification!(sub)
+                push!(sub, m => UInt8(length(p)))
             else
                 n = last(sub[id])
-                sub[id] = Hydroxy() => (n + 0x01)
+                sub[id] = m => (n + UInt8(length(p)))
             end
         end
         sort_chainmodification!(sub)
-        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, fc.isotopiclabel)
-    elseif any(in(lv), [snpositionlevel, passsnpositionlevel, phosphatepositionlevel, passphosphatepositionlevel])
-        all(iszero, poss) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
-        nothing
+        headposition = mapreduce(vcat, zip(bone, poss)) do (b, p) 
+            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
+            [first(pp) => m for pp in p]
+        end
+        fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, vcat(poss...), fc.isotopiclabel)
+        check_configuration!(bone, fc; headposition) 
+        chi = last.(first.(poss))
     else
         throw(ArgumentError("Unknown head group position when \"OH\"'s positions are known"))
     end
-    if any(x -> isa(x, Tuple), pos)
-        pos = map(pos) do p 
-            p isa Int ? UInt8(p) : length(p) == 2 ? (UInt8(first(p)) * UInt8(32) + UInt8(last(p))) : throw(ArgumentError("Invalid head group position, \"$p\""))
+    if any(x -> isa(x, Vector), poss)
+        enpos = map(poss) do p 
+            p isa Int ? UInt8(p) : length(p) == 1 ? UInt8(first(first(p))) : length(p) == 2 ? (UInt8(first(first(p))) * UInt8(32) + UInt8(first(last(p)))) : throw(ArgumentError("Invalid head group position, \"$p\""))
         end
     else
-        pos = convert(Vector{UInt8}, pos)
+        enpos = convert(Vector{UInt8}, pos)
     end
-    Con(bone, length(chain) == 1 ? fc : (fc, chain[begin + 1:end]...), pos)
+    if eltype(chi) <: RSSystem
+        chi = convert(Vector{RSSystem}, chi)
+    end
+    Con(bone, length(chain) == 1 ? fc : (fc, check_configuration!.(nothing, chain[begin + 1:end]...)), enpos, chi)
 end
 
 function make_lipid(Con::Type{<: Sterol}, bone, pos, chain, sn)
@@ -252,7 +354,7 @@ function split_class_position(pos)
             e = i
             continue
         elseif dp == 0
-            push!(v, eval(Meta.parse(pos[s:e])))
+            push!(v, pos[s:e])
             s = nextind(pos, i)
             continue
         elseif x == ')'
@@ -262,6 +364,121 @@ function split_class_position(pos)
     end
     v
 end
+
+function parse_singlechirality(x)
+    if isnothing(x) || isempty(x)
+        RSChirality
+    elseif x == "(R)-"
+        RChirality
+    elseif x == "(S)-"
+        SChirality
+    elseif x == "L-"
+        LForm
+    elseif x == "D-"
+        DForm
+    else
+        @warn "Invalid chirality"
+        RSChirality
+    end
+end
+# specific for glycerol-phospho-aa
+function parse_glycerol_rs(pre)
+    if isnothing(pre)
+        Glycerol{RSChirality}()
+    elseif pre == "(R)-"
+        Glycerol{RChirality}()
+    elseif pre == "(S)-"
+        Glycerol{SChirality}()
+    else
+        @warn "Invalid chirality"
+        Glycerol{RSChirality}()
+    end
+end
+
+function parse_glycerol2_rs(pre)
+    isnothing(pre) && return (Glycerol{RSChirality}(), Glycerol{RSChirality}())
+    rss = split(replace(pre, "(" => "", ")" => "", " " => "", "-" => ""), ",")
+    gly1, gly2 = (Glycerol{RSChirality}(), Glycerol{RSChirality}())
+    for rs in rss 
+        if rs == "R"
+            gly1 = Glycerol{RChirality}()
+        elseif rs == "S"
+            gly1 = Glycerol{SChirality}()
+        elseif rs == "R'"
+            gly2 = Glycerol{RChirality}()
+        elseif rs == "S'"
+            gly2 = Glycerol{SChirality}()
+        else
+            @warn "Invalid chirality"
+        end
+    end
+    (gly2, gly1)
+end
+
+function parse_glycerol3_rs(pre)
+    isnothing(pre) && return (Glycerol{RSChirality}(), Glycerol{RSChirality}(), Glycerol{RSChirality}())
+    rss = split(replace(pre, "(" => "", ")" => "", " " => "", "-" => ""), ",")
+    gly1, gly2, gly3 = (Glycerol{RSChirality}(), Glycerol{RSChirality}(), Glycerol{RSChirality}())
+    for rs in rss 
+        if rs == "R"
+            gly1 = Glycerol{RChirality}()
+        elseif rs == "S"
+            gly1 = Glycerol{SChirality}()
+        elseif rs == "R'"
+            gly2 = Glycerol{RChirality}()
+        elseif rs == "S'"
+            gly2 = Glycerol{SChirality}()
+        elseif rs == "R''"
+            gly3 = Glycerol{RChirality}()
+        elseif rs == "S''"
+            gly3 = Glycerol{SChirality}()
+        else
+            @warn "Invalid chirality"
+        end
+    end
+    (gly3, gly2, gly1)
+end
+
+function parse_aa_glycerol_rs(pre, aa = "Ser")
+    isnothing(pre) && return (parse_aa(aa), Glycerol{RSChirality}())
+    rs, dl = match(r"(?:\(([RS\,']+)\)-)*([DL]-)*", pre)
+    if isnothing(dl)
+        aaa = parse_aa(aa)
+    else
+        aaa = parse_aa(string(dl, aa))
+    end
+    if isnothing(rs)
+        gly = Glycerol{RSChirality}()
+    else
+        rss = split(replace(rs, " " => ""), ",")
+        gly = Glycerol{RSChirality}()
+        for rs in rss 
+            if rs == "R"
+                gly = Glycerol{RChirality}()
+            elseif rs == "S"
+                gly = Glycerol{SChirality}()
+            elseif rs == "R'"
+                aaa = parse_aa(string("(R)-", aa))
+            elseif rs == "S'"
+                aaa = parse_aa(string("(S)-", aa))
+            else
+                @warn "Invalid chirality"
+            end
+        end
+    end
+    (aaa, gly)
+end
+
+function class_rs(backbone)
+    s = getchaincomponent(backbone)
+    rs = collect(map(glycerol_aa_rs, s))
+    filter!(!isnothing, rs)
+    all(==(AChirality()), rs) ? nothing : rs
+end
+
+glycerol_aa_rs(x) = nothing
+glycerol_aa_rs(::Glycerol{T}) where T = T()
+glycerol_aa_rs(aa::αAminoAcid) = alpha_rs(aa)
 
 function parse_sil(s)
     s = replace(s, r"(\d+[A-Z][a-z]*)" => s"[\1]")

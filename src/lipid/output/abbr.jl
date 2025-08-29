@@ -1,3 +1,48 @@
+# Lipid
+# MassSpecChemicals
+getchemicalattr(lipid::T, ::Val{:abbreviation}; kwargs...) where {T <: Lipid} = getchemicalattr(lipid, Val(:name); kwargs...)
+
+chiral_class_abbr(x) = class_abbr(x)
+chiral_class_abbr(x::Union{Glycerolipid, Glycerophospholipid}) = string(repr_class_rs(x), class_abbr(x))
+function chiral_class_abbr(c::Omodifiedmonoradylglycerol)
+    bone = getchaincomponent(c.backbone)
+    if length(bone) == 2 
+        b = parentchemical(first(bone))
+        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(c.backbone) == [α(0x01) => lk(0x03)] && return string(repr_class_rs(c), "SQMG")
+        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(c.backbone) == [β(0x01) => lk(0x03)] && return string(repr_class_rs(c), "MGMG")
+        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(c.backbone) == [α(0x01) => lk(0x03)] && return string(repr_class_rs(c), "GlcAMG")
+    elseif length(bone) == 3 
+        b = parentchemical(first(bone))
+        b2 = parentchemical(bone[begin + 1])
+        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(c.backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return string(repr_class_rs(c), "DGMG")
+    end
+    b = head_abbr(c.backbone)
+    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
+    string(l, "MG", r)
+end
+function chiral_class_abbr(c::Omodifieddiradylglycerol) 
+    bone = getchaincomponent(c.backbone)
+    if length(bone) == 2 
+        b = parentchemical(first(bone))
+        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(c.backbone) == [α(0x01) => lk(0x03)] && return string(repr_class_rs(c), "SQDG")
+        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(c.backbone) == [β(0x01) => lk(0x03)] && return string(repr_class_rs(c), "MGDG")
+        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(c.backbone) == [α(0x01) => lk(0x03)] && return string(repr_class_rs(c), "GlcADG")
+    elseif length(bone) == 3 
+        b = parentchemical(first(bone))
+        b2 = parentchemical(bone[begin + 1])
+        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(c.backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return string(repr_class_rs(c), "DGDG")
+    end
+    b = head_abbr(c.backbone)
+    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
+    string(l, "DG", r)
+end
+
+chiral_class_abbr(x::FattyAcylCarnitine) = string(repr_class_rs(x), class_abbr(x))
+chiral_class_abbr(x::Union{Phosphatidicacid, Phosphatidylcholine, Phosphatidylethanol, Phosphatidylethanolamine, Phosphatidylinositol, Phosphatidylmethanol, PhosphatidylNmethylethanolamine, PhosphatidylNmodifiedethanolamine, PhosphatidylNNdimethylethanolamine, Lysophosphatidicacid, Lysophosphatidylcholine, Lysophosphatidylethanol, Lysophosphatidylethanolamine, Lysophosphatidylinositol, Lysophosphatidylmethanol, LysophosphatidylNmethylethanolamine, LysophosphatidylNmodifiedethanolamine, LysophosphatidylNNdimethylethanolamine}) = 
+    string(repr_class_rs(x), class_abbr(x))
+chiral_class_abbr(c::Monoradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(repr_class_rs(c), "LGP"))
+chiral_class_abbr(c::Diradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(repr_class_rs(c), "GP"))
+
 """
     class_abbr(lipid)
 
@@ -16,9 +61,9 @@ class_abbr(::NacylAmine) = "NA"
 class_abbr(::NacylAmine{<: includeSIL(Ethanolamine)}) = "NAE"
 class_abbr(::NacylAmine{<: includeSIL(Taurine)}) = "NAT"
 for x in NAAA
-    T = typeof(parse_aa(x))
-    @eval head_abbr(aa::$T) = letter3_abbr(aa)
-    @eval class_abbr(c::NacylAmine{<: includeSIL($T)}) = string("NA", head_abbr(c.backbone))
+    T = PROTEIN_3LETTER_AA[string(x)]
+    @eval class_abbr(c::NacylAmine{<: includeSIL($T)}) = string("NA", letter3_abbr(c.backbone))
+    @eval chiral_class_abbr(c::NacylAmine{<: includeSIL($T)}) = string(repr_class_rs(c), class_abbr(c))
 end
 class_abbr(::FattyAcylCarnitine) = "CAR"
 class_abbr(::FattyAcylCoA) = "CoA"
@@ -27,24 +72,15 @@ class_abbr(::FattyAcylEstolid) = "FAHFA"
 class_abbr(::Monoradylglycerol) = "MG"
 class_abbr(::Diradylglycerol) = "DG"
 class_abbr(::Triradylglycerol) = "TG"
-function class_abbr(c::Omodifiedmonoradylglycerol)
-    b = head_abbr(c.backbone)
-    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
-    string(l, "MG", r)
-end
-function class_abbr(c::Omodifieddiradylglycerol)    
-    b = head_abbr(c.backbone)
-    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
-    string(l, "DG", r)
-end
-class_abbr(::Sulfoquinovosylmonoradylglycerol) = "SQMG"
-class_abbr(::Sulfoquinovosyldiradylglycerol) = "SQDG"
-class_abbr(::Monogalactosylmonoradylglycerol) = "MGMG"
-class_abbr(::Monogalactosyldiradylglycerol) = "MGDG"
-class_abbr(::Digalactosylmonoradylglycerol) = "DGMG"
-class_abbr(::Digalactosyldiradylglycerol) = "DGDG"
-class_abbr(::Glucuronosylmonoradylglycerol) = "GlcAMG"
-class_abbr(::Glucuronosyldiradylglycerol) = "GlcADG"
+
+# class_abbr(::Sulfoquinovosylmonoradylglycerol) = "SQMG"
+# class_abbr(::Sulfoquinovosyldiradylglycerol) = "SQDG"
+# class_abbr(::Monogalactosylmonoradylglycerol) = "MGMG"
+# class_abbr(::Monogalactosyldiradylglycerol) = "MGDG"
+# class_abbr(::Digalactosylmonoradylglycerol) = "DGMG"
+# class_abbr(::Digalactosyldiradylglycerol) = "DGDG"
+# class_abbr(::Glucuronosylmonoradylglycerol) = "GlcAMG"
+# class_abbr(::Glucuronosyldiradylglycerol) = "GlcADG"
 
 class_abbr(::Phosphatidicacid) = "PA"
 class_abbr(::Phosphatidylcholine) = "PC"
@@ -68,9 +104,9 @@ function class_abbr(c::Phosphatidylinositol)
         n = 0
         p = String[]
         for i in first(getchaincomponent(c.backbone)).substituent
-            if i isa Pair && first(i) isa Phosphate
+            if i isa Pair && first(i) isa Phosphoryl
                 n += last(i)
-            elseif i isa Pair && last(i) isa Phosphate
+            elseif i isa Pair && last(i) isa Phosphoryl
                 n += 1
                 push!(p, string(Int(first(i)), "'"))
             end
@@ -86,8 +122,6 @@ class_abbr(::Phosphatidylglycerol) = "PG"
 class_abbr(::Phosphatidylglycerolphosphate) = "PGP"
 class_abbr(::Phosphatidylmethanol) = "PMeOH"
 class_abbr(::Phosphatidylethanol) = "PEtOH"
-class_abbr(c::Diradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*Glycerol[^-]*-*$" => "GP")
-
 class_abbr(::Lysophosphatidicacid) = "LPA"
 class_abbr(::Lysophosphatidylcholine) = "LPC"
 class_abbr(::Lysophosphatidylethanolamine) = "LPE"
@@ -110,9 +144,9 @@ function class_abbr(c::Lysophosphatidylinositol)
         n = 0
         p = String[]
         for i in first(getchaincomponent(c.backbone)).substituent
-            if i isa Pair && first(i) isa Phosphate
+            if i isa Pair && first(i) isa Phosphoryl
                 n += last(i)
-            elseif i isa Pair && last(i) isa Phosphate
+            elseif i isa Pair && last(i) isa Phosphoryl
                 n += 1
                 push!(p, string(Int(first(i)), "'"))
             end
@@ -128,7 +162,6 @@ class_abbr(::Lysophosphatidylglycerol) = "LPG"
 class_abbr(::Lysophosphatidylglycerolphosphate) = "LPGP"
 class_abbr(::Lysophosphatidylmethanol) = "LPMeOH"
 class_abbr(::Lysophosphatidylethanol) = "LPEtOH"
-class_abbr(c::Monoradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*Glycerol[^-]*-*$" => "LGP")
 
 class_abbr(::Bisphosphatidicacid) = "BPA"
 class_abbr(::Semilysobisphosphatidicacid) = "SLBPA"
@@ -168,13 +201,12 @@ class_abbr(::Lysomannosyldiinositolphosphorylceramide) = "LM(IP)2C"
 class_abbr(::Lysosphingomyelin) = "LSM"
 class_abbr(::Lysosulfonolipid) = "LSL"
 function class_abbr(c::Acylceramide)
-    mod = head_abbr(c.headgroup)
-    isempty(mod) ? "ACer" : string(mod, "-ACer")
+    string(head_abbr(c.headgroup), "-ACer")
 end
-function class_abbr(c::Acylhexosylceramide)
-    mod1, mod2 = head_abbr.(c.headgroup)
-    isempty(mod1) ? string("A", mod2, "Cer") : string(mod1, "-A", mod2, "Cer")
-end
+# function class_abbr(c::Acylhexosylceramide)
+#     mod1, mod2 = head_abbr.(c.headgroup)
+#     isempty(mod1) ? string("A", mod2, "Cer") : string(mod1, "-A", mod2, "Cer")
+# end
 function class_abbr(c::Acylsphingomyelin)
     mod1, mod2 = head_abbr.(c.headgroup)
     isempty(mod1) ? "ASM" : string(mod1, "-ASM")
@@ -241,7 +273,7 @@ function head_abbr(glycan::Glycan)
 end
 
 function head_abbr(x::Hexose)
-    if x.substituent == [Sulfate() => 0x01]
+    if x.substituent == [Sulfo() => 0x01]
        "SHex" 
     else
         chemicalabbr(x)
@@ -293,6 +325,10 @@ function head_abbr(dc::DehydratedChemical)
     s
 end
 
+function head_abbr(dc::Substituent)
+    head_abbr(dc.chemical)
+end
+
 """
     sub_abbr(lipid)
 
@@ -302,7 +338,7 @@ sub_abbr(x) = chemicalabbr(x)
 sub_abbr(::Tauryl) = "T"
 sub_abbr(::PhosphoricAcid) = "P"
 function sub_abbr(x::Hexose)
-    if x == Hexose([Sulfate() => 0x01])
+    if x == Hexose([Sulfo() => 0x01])
        "SHex" 
     else
         chemicalabbr(x)
@@ -350,7 +386,7 @@ end
 
 function sub_abbr(lf::XLinkedFunctionalGroup)
     l = sub_abbr(lf.xlinkage)
-    f = sub_abbr(lf.functionalgroup) # depends on linkage, no internal linkage
+    f = lf.xlinkage == CarboxylicLinkage() ? head_abbr(lf.functionalgroup) : sub_abbr(lf.functionalgroup) # depends on linkage, no internal linkage
     if occursin(" ", f) || startswith(f, r"\d") || occursin("-", f)
         string(l, "(", f, ")")
     else

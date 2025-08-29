@@ -26,7 +26,7 @@ function class_struct_FN(head, pre, cls, post, pos, sil)
 end
 function class_struct_CAR(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `CAR` is not suppoted"))
-    (MonoFattyAcyl, makechemical(Carnitine(); sil), (Acyl, ))
+    (MonoFattyAcyl, makechemical(chiralchemical(Carnitine, parse_singlechirality(pre)); sil), (Acyl, ))
 end
 function class_struct_CoA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `CoA` is not suppoted"))
@@ -42,7 +42,8 @@ function class_struct_NAT(head, pre, cls, post, pos, sil)
 end
 function class_struct_NAAA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `NA` is not suppoted"))
-    (NacylAmine, makechemical(parse_aa(replace(cls, r"^NA" => "")); sil), (Acyl, ))
+    # pre
+    (NacylAmine, makechemical(parse_aa(string(pre, replace(cls, r"^NA" => ""))); sil), (Acyl, ))
 end
 function class_struct_NA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `NA` is not suppoted"))
@@ -58,418 +59,470 @@ function class_struct_FAHFA(head, pre, cls, post, pos, sil)
     (FattyAcylEster, class_struct_FA(head, pre, cls, post, pos, sil), (Acyl, Acyl)) # second one ;O
 end
 function class_struct_MG(head, pre, cls, post, pos, sil)
+    gly = parse_glycerol_rs(pre)
     (isnothing(head) ? Monoradylglycerol : Omodifiedradylglycerol, 
-        isnothing(head) ? makechemical(Glycerol(); sil) : 
-        concatchemical(DehydratedChemical, parse_headgroup(head), Glycerol(); sil), # makechemical => concatchemical? 
+        isnothing(head) ? makechemical(gly; sil) : 
+        concatchemical(DehydratedChemical, parse_headgroup(head), gly; sil), # makechemical => concatchemical? 
         (Radyl, )
     )
 end
 function class_struct_DG(head, pre, cls, post, pos, sil)
+    gly = parse_glycerol_rs(pre)
     (isnothing(head) ? Diradylglycerol : Omodifiedradylglycerol, 
-        isnothing(head) ? makechemical(Glycerol(); sil) : 
-        concatchemical(DehydratedChemical, parse_headgroup(head), Glycerol(); sil), # makechemical => concatchemical?
+        isnothing(head) ? makechemical(gly; sil) : 
+        concatchemical(DehydratedChemical, parse_headgroup(head), gly; sil), # makechemical => concatchemical?
         (Radyl, Radyl)
     )
 end
 function class_struct_TG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `TG` is not suppoted"))
-    (Triradylglycerol, makechemical(Glycerol(); sil), (Radyl, Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Triradylglycerol, makechemical(gly; sil), (Radyl, Radyl, Radyl))
 end
 function class_struct_SQMG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `SQMG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Sulfoquinovose(), Glycerol(); sil, linkage = [α(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
         (Radyl, )
     )
 end
 function class_struct_SQDG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `SQDG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Sulfoquinovose(), Glycerol(); sil, linkage = [α(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
         (Radyl, Radyl)
     )
 end
 function class_struct_MGMG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `MGMG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Galactose(), Glycerol(); sil, linkage = [β(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Galactose(; DL = DForm), gly; sil, linkage = [β(0x01) => lk(0x03)]), 
         (Radyl, )
     )
 end
 function class_struct_MGDG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `MGDG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Galactose(), Glycerol(); sil, linkage = [β(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Galactose(; DL = DForm), gly; sil, linkage = [β(0x01) => lk(0x03)]), 
         (Radyl, Radyl)
     )
 end
 function class_struct_DGMG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `DGMG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Galactose(), Galactose(), Glycerol(); sil, linkage = [α(0x01) => lk(0x06), β(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Galactose(; DL = DForm), Galactose(; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x06), β(0x01) => lk(0x03)]), 
         (Radyl, )
     )
 end
 function class_struct_DGDG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `DGDG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Galactose(), Galactose(), Glycerol(); sil, linkage = [α(0x01) => lk(0x06), β(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, Galactose(; DL = DForm), Galactose(; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x06), β(0x01) => lk(0x03)]), 
         (Radyl, Radyl)
     )
 end
 function class_struct_GlcAMG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `GlcAMG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, GlucuronicAcid(), Glycerol(); sil, linkage =  [α(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical, GlucuronicAcid(; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
         (Radyl, )
     )
 end
 function class_struct_GlcADG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `GlcADG` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, GlucuronicAcid(), Glycerol(); sil, linkage = [α(0x01) => lk(0x03)]), (Radyl, Radyl))
+        makechemical(DehydratedChemical, GlucuronicAcid(; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), (Radyl, Radyl))
 end
 
 function class_struct_PA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PA` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPA` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_PC(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PC` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Choline(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Choline(), PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPC(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPC` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Choline(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Choline(), PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_PE(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PE` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPE(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPE` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_PE_NMe(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PE-NMe` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, Nmethylethanolamine(), PhosphoricAcid(), Glycerol(); sil),
+        makechemical(DehydratedChemical, Nmethylethanolamine(), PhosphoricAcid(), gly; sil),
         (Radyl, Radyl)
     )
 end
 function class_struct_LPE_NMe(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPE-NMe` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, Nmethylethanolamine(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, Nmethylethanolamine(), PhosphoricAcid(), gly; sil), 
         (Radyl, )
     )
 end
 function class_struct_PE_NMe2(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PE-NMe2` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, NNdimethylethanolamine(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, NNdimethylethanolamine(), PhosphoricAcid(), gly; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPE_NMe2(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPE-NMe2` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, NNdimethylethanolamine(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, NNdimethylethanolamine(), PhosphoricAcid(), gly; sil), 
         (Radyl, )
     )
 end
 function class_struct_PE_N(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PE-N` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     post = replace(post, r"^\(" => "", r"\)$" => "")
     if post == "FA"
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FA 0:0"), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl, Acyl)
         )
     elseif post == "Alk"
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FOH 0:0"), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl, Alkyl)
         )
     else
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup(post), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl)
         )
     end
 end
 function class_struct_LPE_N(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPE-N` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     post = replace(post, r"^\(" => "", r"\)$" => "")
     if post == "FA"
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FA 0:0"), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, Acyl)
         )
     elseif post == "Alk"
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FOH 0:0"), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, Alkyl)
         )
     else
         (Radylglycerophosphate, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup(post), 
-                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil)), 
             (Radyl, )
         )
     end
 end
 function class_struct_PS(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PS` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    ser, gly = parse_aa_glycerol_rs(pre)
+    (Radylglycerophosphoaminoacid, makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPS(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPS` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    ser, gly = parse_aa_glycerol_rs(pre)
+    (Radylglycerophosphoaminoacid, makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_PS_N(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PS-N` is not suppoted, please use `GP` instead"))
+    ser, gly = parse_aa_glycerol_rs(pre)
     post = replace(post, r"^\(" => "", r"\)$" => "")
     if post == "FA"
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FA 0:0"), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl, Acyl)
         )
     elseif post == "Alk"
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FOH 0:0"), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl, Alkyl)
         )
     else
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup(post), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, Radyl)
         )
     end
 end
 function class_struct_LPS_N(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPS-N` is not suppoted, please use `LGP` instead"))
+    ser, gly = parse_aa_glycerol_rs(pre)
     post = replace(post, r"^\(" => "", r"\)$" => "")
     if post == "FA"
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FA 0:0"), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, Acyl)
         )
     elseif post == "Alk"
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup("FOH 0:0"), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, Alkyl)
         )
     else
-        (Radylglycerophosphate, 
+        (Radylglycerophosphoaminoacid, 
             concatchemical(DehydratedChemical, 
                 parse_tailgroup(post), 
-                makechemical(DehydratedChemical, Serine(), PhosphoricAcid(), Glycerol(); sil)), 
+                makechemical(DehydratedChemical, ser, PhosphoricAcid(), gly; sil)), 
             (Radyl, )
         )
     end
 end
 function class_struct_PI(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PI` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, Inositol(), PhosphoricAcid(), Glycerol(); sil, linkage = [α(0x01) => lk(nothing), lk(nothing) => lk(0x01)]), 
+        makechemical(DehydratedChemical, Inositol(), PhosphoricAcid(), gly; sil, linkage = [α(0x01) => lk(nothing), lk(nothing) => lk(0x01)]), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPI(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPI` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, Inositol(), PhosphoricAcid(), Glycerol(); sil, linkage = [α(0x01) => lk(nothing), lk(nothing) => lk(0x01)]), 
+        makechemical(DehydratedChemical, Inositol(), PhosphoricAcid(), gly; sil, linkage = [α(0x01) => lk(nothing), lk(nothing) => lk(0x01)]), 
         (Radyl, )
     )
 end
-function class_struct_PG(head, pre, cls, post, pos, sil)
-    isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PG` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
-end
-function class_struct_LPG(head, pre, cls, post, pos, sil)
-    isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPG` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
-end
 function class_struct_PMeOH(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PMeOH` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Methanol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Methanol(), PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPMeOH(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPMeOH` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Methanol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Methanol(), PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_PEtOH(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PEtOH` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, Radyl))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanol(), PhosphoricAcid(), gly; sil), (Radyl, Radyl))
 end
 function class_struct_LPEtOH(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPEtOH` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanol(), PhosphoricAcid(), Glycerol(); sil), (Radyl, ))
+    gly = parse_glycerol_rs(pre)
+    (Radylglycerophosphate, makechemical(DehydratedChemical, Ethanol(), PhosphoricAcid(), gly; sil), (Radyl, ))
 end
 function class_struct_GP(head, pre, cls, post, pos, sil)
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-    concatchemical(DehydratedChemical, parse_headgroup(head), PhosphoricAcid(), Glycerol(); sil), # makechemical => concatchemical?
+    concatchemical(DehydratedChemical, parse_headgroup(head), PhosphoricAcid(), gly; sil), # makechemical => concatchemical?
         (Radyl, Radyl)
     )
 end
 function class_struct_LGP(head, pre, cls, post, pos, sil)
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
-    concatchemical(DehydratedChemical, parse_headgroup(head), PhosphoricAcid(), Glycerol(); sil), # makechemical => concatchemical?
+    concatchemical(DehydratedChemical, parse_headgroup(head), PhosphoricAcid(), gly; sil), # makechemical => concatchemical?
         (Radyl, Radyl)
     )
 end
 function class_struct_PIP(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PIP` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(1)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPIP(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPIP` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(1)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_PIP2(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PIP2` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(2)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPIP2(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPIP2` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(2)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, )
     )
 end
 function class_struct_PIP3(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PIP3` is not suppoted, please use `GP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(3)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPIP3(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPIP3` is not suppoted, please use `LGP` instead"))
+    gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphate() => UInt8(3)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphate() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
+            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
+                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
             PhosphoricAcid(), 
-            Glycerol(); sil), 
+            gly; sil), 
         (Radyl, )
     )
 end
+function class_struct_PG(head, pre, cls, post, pos, sil)
+    isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PG` is not suppoted, please use `GP` instead"))
+    gly2, gly1 = parse_glycerol2_rs(pre)
+    (Radylglycerophosphoglycerol, makechemical(DehydratedChemical, gly2, PhosphoricAcid(), gly1; sil), (Radyl, Radyl))
+end
+function class_struct_LPG(head, pre, cls, post, pos, sil)
+    isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPG` is not suppoted, please use `LGP` instead"))
+    gly2, gly1 = parse_glycerol2_rs(pre)
+    (Radylglycerophosphoglycerol, makechemical(DehydratedChemical, gly2, PhosphoricAcid(), gly1; sil), (Radyl, ))
+end
 function class_struct_PGP(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `PGP` is not suppoted, please use `GP` instead"))
-    (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, PhosphoricAcid(), Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+    gly2, gly1 = parse_glycerol2_rs(pre)
+    (Radylglycerophosphoglycerol, 
+        makechemical(DehydratedChemical, PhosphoricAcid(), gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_LPGP(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LPGP` is not suppoted, please use `LGP` instead"))
-    (Radylglycerophosphate, 
-        makechemical(DehydratedChemical, PhosphoricAcid(), Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+    gly2, gly1 = parse_glycerol2_rs(pre)
+    (Radylglycerophosphoglycerol, 
+        makechemical(DehydratedChemical, PhosphoricAcid(), gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, )
     )
 end
 function class_struct_BPA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `BPA` is not suppoted"))
+    gly2, gly1 = parse_glycerol2_rs(pre)
     (Bisradylglycerophosphate, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl, Radyl, Radyl)
     )
 end
 function class_struct_SLBPA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `SLBPA` is not suppoted"))
+    gly2, gly1 = parse_glycerol2_rs(pre)
     (Bisradylglycerophosphate, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl, Radyl)
     )
 end
 function class_struct_LBPA(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `LBPA` is not suppoted"))
+    gly2, gly1 = parse_glycerol2_rs(pre)
     (Bisradylglycerophosphate, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_CL(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `CL` is not suppoted"))
+    gly3, gly2, gly1 = parse_glycerol3_rs(pre)
     (Bisradylglycerophosphoglycerol, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly3, PhosphoricAcid(), gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl, Radyl, Radyl)
     )
 end
 function class_struct_MLCL(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `MLCL` is not suppoted"))
+    gly3, gly2, gly1 = parse_glycerol3_rs(pre)
     (Bisradylglycerophosphoglycerol, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly3, PhosphoricAcid(), gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl, Radyl)
     )
 end
 function class_struct_DLCL(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `DLCL` is not suppoted"))
+    gly3, gly2, gly1 = parse_glycerol3_rs(pre)
     (Bisradylglycerophosphoglycerol, 
-        makechemical(DehydratedChemical, Glycerol(), PhosphoricAcid(), Glycerol(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, gly3, PhosphoricAcid(), gly2, PhosphoricAcid(), gly1; sil), 
         (Radyl, Radyl)
     )
 end
 function class_struct_GP_NAE(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `GP-NAE` is not suppoted"))
+    gly = parse_glycerol_rs(pre)
     (GlycerophosphoNacylethanolamine, 
-        makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), Glycerol(); sil), 
+        makechemical(DehydratedChemical, Ethanolamine(), PhosphoricAcid(), gly; sil), 
         (Acyl, )
     )
 end
@@ -614,42 +667,42 @@ function class_struct_LGSL(head, pre, cls, post, pos, sil)
 end
 function class_struct_GlcCer(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
-    class_struct_Cer("Glcβ-", pre, "Cer", post, pos, sil)
+    class_struct_Cer("D-Glcβ-", pre, "Cer", post, pos, sil)
 end
 function class_struct_GlcSPB(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `SPB` instead"))
-    class_struct_Cer("Glcβ-", pre, "SPB", post, pos, sil)
+    class_struct_Cer("D-Glcβ-", pre, "SPB", post, pos, sil)
 end
 function class_struct_GalCer(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
-    class_struct_Cer("Galβ-", pre, "Cer", post, pos, sil)
+    class_struct_Cer("D-Galβ-", pre, "Cer", post, pos, sil)
 end
 function class_struct_GalSPB(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `SPB` instead"))
-    class_struct_Cer("Galβ-", pre, "SPB", post, pos, sil)
+    class_struct_Cer("D-Galβ-", pre, "SPB", post, pos, sil)
 end
 function class_struct_LacCer(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
-    class_struct_Cer("Galβ-4Glcβ-", pre, "Cer", post, pos, sil)
+    class_struct_Cer("D-Galβ-4D-Glcβ-", pre, "Cer", post, pos, sil)
 end
 function class_struct_LacSPB(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `SPB` instead"))
-    class_struct_Cer("Galβ-4Glcβ-", pre, "SPB", post, pos, sil)
+    class_struct_Cer("D-Galβ-4Glcβ-", pre, "SPB", post, pos, sil)
 end
 function class_struct_SL(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
-    (SphingoBone, makechemical(SulfurousAcid(); sil), (SPB, Acyl))
+    (SphingoBone, nothing, (SulfoSPB, Acyl))
 end
 function class_struct_LSL(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
-    (SphingoBone, makechemical(SulfurousAcid(); sil), (SPB, ))
+    (SphingoBone, nothing, (SulfoSPB, ))
 end
 
 function class_struct_ACer(head, pre, cls, post, pos, sil)
     isnothing(sil) || @warn "Ignore stable isotope labeling on class"
-    (SphingoBone, parse_lipid(head), (SPB, Acyl, Acyl))
+    (SphingoBone, parse_lipid(pre), (SPB, Acyl, Acyl))
 end
-class_struct_ASM(head, pre, cls, post, pos, sil) = (MixSphingoBone, (parse_lipid(head), makechemical(DehydratedChemical, Choline(), PhosphoricAcid(); sil)), (SPB, Acyl, Acyl))
+class_struct_ASM(head, pre, cls, post, pos, sil) = (MixSphingoBone, (parse_lipid(pre), makechemical(DehydratedChemical, Choline(), PhosphoricAcid(); sil)), (SPB, Acyl, Acyl))
 
 class_struct_ST(head, pre, cls, post, pos, sil) = (SterolBone, nothing, (STRing, ))
 class_struct_SE(head, pre, cls, post, pos, sil) = (SterolBone, nothing, (STRing, Acyl))

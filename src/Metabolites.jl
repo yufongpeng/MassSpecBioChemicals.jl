@@ -1,7 +1,8 @@
 module Metabolites
 using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
-import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, dehydroxyposition, dehydrogenposition, leavinggroupelements
+using ..MassSpecBioChemicals: GlyceraldehydeSystem
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, dehydroxyposition, dehydrogenposition, leavinggroupelements, dehydrogengroup, dehydroxygroup, chiralchemical
 import MassSpecChemicals: getchemicalattr
 export Metabolite, 
        Ethanolamine, 
@@ -15,7 +16,7 @@ export Metabolite,
        Choline, 
        CoA, 
        GlycolicAcid, 
-       Glycoyl, # Gc
+       Glycolyl, # Gc
        LacticAcid, 
        Lactyl, # Lt
        PyruvicAcid, 
@@ -31,18 +32,42 @@ struct GABA <: Metabolite end
 struct Dopamine <: Metabolite end
 struct Taurine <: Metabolite end # T
 struct Tauryl <: FunctionalGroup{Taurine, Dehydrogen} end # T/Tau
-struct Carnitine <: Metabolite end
+struct Carnitine{L} <: Metabolite end
 struct Choline <: Metabolite end
 struct CoA <: Metabolite end
 struct GlycolicAcid <: Metabolite end
-struct Glycoyl <: FunctionalGroup{GlycolicAcid, Dehydroxy} end # Gc
-struct LacticAcid <: Metabolite end
-struct Lactyl <: FunctionalGroup{LacticAcid, Dehydroxy} end # Lt
+struct Glycolyl <: FunctionalGroup{GlycolicAcid, Dehydroxy} end # Gc
+struct LacticAcid{L} <: Metabolite end
+struct Lactyl{L} <: FunctionalGroup{LacticAcid{L}, Dehydroxy} end # Lt
 struct PyruvicAcid <: Metabolite end
 struct Pyruvyl <: FunctionalGroup{PyruvicAcid, Dehydroxy} end # Py
-struct Glycerol <: Metabolite end
-struct Glyceryl <: FunctionalGroup{Glycerol, Dehydrogen} end # Gr
-conjugation(t::Taurine) = Tauryl()
+struct Glycerol{R} <: Metabolite end
+struct Glyceryl{R} <: FunctionalGroup{Glycerol{R}, Dehydrogen} end # Gr
+# TCA cycle
+# Seotonin, melanin
+# Norepinephrine, epinephrine, 
+
+chiralchemical(::Type{Carnitine}, ::Type{I}) where {I <: GlyceraldehydeSystem} = Carnitine{I}()
+chiralchemical(::Type{Carnitine}, ::Type{RSChirality}) = Carnitine{DLForm}()
+chiralchemical(::Type{Carnitine}, ::Type{SChirality}) = Carnitine{DForm}()
+chiralchemical(::Type{Carnitine}, ::Type{RChirality}) = Carnitine{LForm}()
+chiralchemical(::Type{LacticAcid}, ::Type{I}) where {I <: GlyceraldehydeSystem} = LacticAcid{I}()
+chiralchemical(::Type{LacticAcid}, ::Type{RSChirality}) = LacticAcid{DLForm}()
+chiralchemical(::Type{LacticAcid}, ::Type{RChirality}) = LacticAcid{DForm}()
+chiralchemical(::Type{LacticAcid}, ::Type{SChirality}) = LacticAcid{LForm}()
+chiralchemical(::Type{Lactyl}, ::Type{I}) where {I <: GlyceraldehydeSystem} = Lactyl{I}()
+chiralchemical(::Type{Lactyl}, ::Type{RSChirality}) = Lactyl{DLForm}()
+chiralchemical(::Type{Lactyl}, ::Type{RChirality}) = Lactyl{DForm}()
+chiralchemical(::Type{Lactyl}, ::Type{SChirality}) = Lactyl{LForm}()
+chiralchemical(::Type{Glycerol}, ::Type{I}) where {I <: RSChirality} = Glycerol{I}()
+chiralchemical(::Type{Glyceryl}, ::Type{I}) where {I <: RSChirality} = Glyceryl{I}()
+
+dehydrogengroup(::Taurine; position = nothing) = Tauryl()
+dehydroxygroup(::GlycolicAcid; position = nothing) = Glycolyl()
+dehydroxygroup(::LacticAcid{T}; position = nothing) where T = Lactyl{T}()
+dehydroxygroup(::PyruvicAcid; position = nothing) = Pyruvyl()
+dehydrogengroup(::Glycerol{T}; position = nothing) where T = Glyceryl{T}()
+conjugation(::Taurine) = Tauryl()
 
 getchemicalattr(::Ethanolamine, ::Val{:name}; kwargs...) = "Ethanolamine"
 getchemicalattr(::Nmethylethanolamine, ::Val{:name}; kwargs...) = "N-Methylethanolamine"
@@ -51,12 +76,18 @@ getchemicalattr(::GABA, ::Val{:name}; kwargs...) = "GABA"
 getchemicalattr(::Dopamine, ::Val{:name}; kwargs...) = "Dopamine"
 getchemicalattr(::Taurine, ::Val{:name}; kwargs...) = "Taurine"
 getchemicalattr(::Carnitine, ::Val{:name}; kwargs...) = "Carnitine"
+getchemicalattr(::Carnitine{LForm}, ::Val{:name}; kwargs...) = "L-Carnitine"
+getchemicalattr(::Carnitine{DForm}, ::Val{:name}; kwargs...) = "D-Carnitine"
 getchemicalattr(::Choline, ::Val{:name}; kwargs...) = "Choline"
 getchemicalattr(::CoA, ::Val{:name}; kwargs...) = "CoA"
 getchemicalattr(::GlycolicAcid, ::Val{:name}; kwargs...) = "Glycolic acid"
 getchemicalattr(::LacticAcid, ::Val{:name}; kwargs...) = "Lactic acid"
+getchemicalattr(::LacticAcid{LForm}, ::Val{:name}; kwargs...) = "L-Lactic acid"
+getchemicalattr(::LacticAcid{DForm}, ::Val{:name}; kwargs...) = "D-Lactic acid"
 getchemicalattr(::PyruvicAcid, ::Val{:name}; kwargs...) = "Pyruvic acid"
 getchemicalattr(::Glycerol, ::Val{:name}; kwargs...) = "Glycerol"
+getchemicalattr(::Glycerol{RChirality}, ::Val{:name}; kwargs...) = "(R)-Glycerol"
+getchemicalattr(::Glycerol{SChirality}, ::Val{:name}; kwargs...) = "(S)-Glycerol"
 
 getchemicalattr(::Ethanolamine, ::Val{:formula}; kwargs...) = "HOCH2CH2NH2"
 getchemicalattr(::Nmethylethanolamine, ::Val{:formula}; kwargs...) = "CH3NHCH2CH2OH"
@@ -84,18 +115,45 @@ getchemicalattr(::CoA, ::Val{:SMILES}; kwargs...) = "SCCNC(=O)CCNC(=O)C(O)C(C)(C
 getchemicalattr(::GlycolicAcid, ::Val{:SMILES}; kwargs...) = "OCC(=O)[O-]"
 getchemicalattr(::LacticAcid, ::Val{:SMILES}; kwargs...) = "OC(C)C(=O)[O-]"
 getchemicalattr(::PyruvicAcid, ::Val{:SMILES}; kwargs...) = "CC(=O)C(=O)[O-]"
-getchemicalattr(::Glycerol, ::Val{:SMILES}; kwargs...) = "C(O)C(O)C(O)"
+function getchemicalattr(::Glycerol, ::Val{:SMILES}; chain = (:O1, :C3))
+    if chain == (:O1, :C3)
+        "OCC(O)C(O)"
+    elseif chain == (:C3, :O1)
+        "C(O)C(O)CO"
+    elseif chain == (:C3, :C1)
+        "C(O)C(O)C(O)"
+    elseif chain == (:C1, :C3)
+        "C(O)C(O)C(O)"
+    elseif chain == (:O3, :C1)
+        "OCC(O)C(O)"
+    elseif chain == (:C1, :O3)
+        "C(O)C(O)CO"
+    elseif chain == (:O3, :O1)
+        "OCC(O)CO"
+    elseif chain == (:O1, :O3)
+        "OCC(O)CO"
+    end
+end
 
 getchemicalattr(::Tauryl, ::Val{:abbreviation}; kwargs...) = "Tau"
-getchemicalattr(::Glycoyl, ::Val{:abbreviation}; kwargs...) = "Gc"
+getchemicalattr(::Glycolyl, ::Val{:abbreviation}; kwargs...) = "Gc"
 getchemicalattr(::Lactyl, ::Val{:abbreviation}; kwargs...) = "Lt"
 getchemicalattr(::Pyruvyl, ::Val{:abbreviation}; kwargs...) = "Py"
 getchemicalattr(::Glyceryl, ::Val{:abbreviation}; kwargs...) = "Gr"
+getchemicalattr(::Tauryl, ::Val{:name}; kwargs...) = "Tauryl"
+getchemicalattr(::Glycolyl, ::Val{:name}; kwargs...) = "Glycolyl"
+getchemicalattr(::Lactyl, ::Val{:name}; kwargs...) = "Lactyl"
+getchemicalattr(::Lactyl{DForm}, ::Val{:name}; kwargs...) = "D-Lactyl"
+getchemicalattr(::Lactyl{LForm}, ::Val{:name}; kwargs...) = "L-Lactyl"
+getchemicalattr(::Pyruvyl, ::Val{:name}; kwargs...) = "Pyruvyl"
+getchemicalattr(::Glyceryl, ::Val{:name}; kwargs...) = "Glyceryl"
+getchemicalattr(::Glyceryl{RChirality}, ::Val{:name}; kwargs...) = "(R)-Glyceryl"
+getchemicalattr(::Glyceryl{SChirality}, ::Val{:name}; kwargs...) = "(S)-Glyceryl"
 getchemicalattr(x::T, ::Val{:name}; kwargs...) where {T <: FunctionalGroup{<: Metabolite}} = string(T, " Group")
 getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: Metabolite}} = vcat(chemicalelements(parentchemical(x)), leavinggroupelements(leavinggroup(x)))
 
 getchemicalattr(::Tauryl, ::Val{:SMILES}; kwargs...) = "(NCCS(=O)(=O)O)"
-getchemicalattr(::Glycoyl, ::Val{:SMILES}; kwargs...) = "(C(=O)CO)"
+getchemicalattr(::Glycolyl, ::Val{:SMILES}; kwargs...) = "(C(=O)CO)"
 getchemicalattr(::Lactyl, ::Val{:SMILES}; kwargs...) = "(C(=O)C(O)C)"
 getchemicalattr(::Pyruvyl, ::Val{:SMILES}; kwargs...) = "(C(=O)C(=O)C)"
 getchemicalattr(::Glyceryl, ::Val{:SMILES}; kwargs...) = "(OCC(O)C(O))"
