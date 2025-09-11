@@ -461,22 +461,24 @@ function parse_geometricconfig(db, pos)
     for p in ps
         x, e = p
         x = parse(UInt8, x)
+        haskey(dbm, x) && throw(ArgumentError("Multiple doublebond at position `$(Int(x))`."))
         e = isnothing(e) ? EZConfiguration() : e == "Z" ? ZConfiguration() : e == "E" ? EConfiguration() : throw(ArgumentError("Invalid double bond configuration, \"$(string(ps))\""))
         v = get!(dbm, x, e)
-        if v == e 
-            continue 
-        elseif e == EZConfiguration()
-            continue 
-        elseif v == EZConfiguration()
-            dbm[x] = e 
-        else 
-            throw(ArgumentError("Conflict double bond configuration at position `$(Int(x))`"))
-        end
+        # if v == e 
+        #     continue 
+        # elseif e == EZConfiguration()
+        #     continue 
+        # elseif v == EZConfiguration()
+        #     dbm[x] = e 
+        # else 
+        #     throw(ArgumentError("Conflict double bond configuration at position `$(Int(x))`"))
+        # end
     end
     dbp = Pair{UInt8, GeometricConfiguration}[UInt8(k) => v for (k, v) in dbm]
     n = db - length(dbp)
     if n > 0 
-        dbp = vcat(repeat([0x00 => RSChirality()], n), dbp)
+        @warn "Positions are not assigned for some double bonds."
+        dbp = vcat(repeat([0x00 => NoEZConfiguration()], n), dbp)
     elseif n < 0 
         @warn "Actual number of double bonds are larger than that indicated in `cb:db` notation"
     end
