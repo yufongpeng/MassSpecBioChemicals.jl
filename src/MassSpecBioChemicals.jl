@@ -4,12 +4,12 @@ using Reexport
 @reexport using MassSpecChemicals
 using MassSpecChemicals: AbstractChemical
 using IterTools
-import Base: show
+import Base: show, length
 import MassSpecChemicals: getchemicalattr
-export FunctionalGroup, UnknownGroup, UnknownChemical, LeavingGroup, Dehydrogen, Odehydrogen, Ndehydrogen, Didehydrogen, Odidehydrogen, Ndidehydrogen, Deamine, Dehydroxy, Demethyl,
-        Substituent, SubstitutedChemical, XLinkedFunctionalGroup, ChainedChemical, DehydratedChemical, IsotopiclabeledChemical,
+export FunctionalGroup, UnknownGroup, UnknownChemical, LeavingGroup, Dehydrogen, Odehydrogen, Ndehydrogen, Didehydrogen, Odidehydrogen, Ndidehydrogen, Deamine, Dehydroxy, Demethine, Tridehydrogen,
+        Substituent, NullSubstituent, SubstitutedChemical, XLinkedFunctionalGroup, ChainedChemical, DehydratedChemical, IsotopiclabeledChemical,
         AbstractLinkageposition, Linkageposition, 
-        parentchemical, leavinggroup, conjugation, includeSIL, getchainlinkage, getchaincomponent, getchainconfig, ischainedchemical, 
+        parentchemical, leavinggroup, conjugation, includeSIL, getchainlinkage, getchaincomponent, getchainconfig, composition, ischainedchemical, 
         AChirality, RSChirality, RChirality, SChirality, 
         NoOpticRotation, UnknownRotation, ClockwiseRotation, CounterclockwiseRotation, 
         NoDLForm, DLForm, LForm, DForm, 
@@ -102,6 +102,7 @@ struct UnknownChemical{F <: UnknownGroup} <: AbstractChemical end
 
 include("attr.jl")
 include("chemicals.jl")
+include("interface.jl")
 include("io.jl")
 
 include("BasicCompounds.jl")

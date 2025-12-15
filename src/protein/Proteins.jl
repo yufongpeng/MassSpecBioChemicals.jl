@@ -3,7 +3,7 @@ using Reexport
 using ..MassSpecBioChemicals
 using ..MassSpecBioChemicals: lk, GlyceraldehydeSystem, RSSystem
 using MassSpecChemicals: AbstractChemical
-import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, dehydrogengroup, dehydroxygroup, chiralchemical
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, dehydrogengroup, dehydroxygroup, chiralchemical, losswaterelements
 import MassSpecChemicals: getchemicalattr
 export AbstractPeptide,
         αAminoAcid, 
@@ -116,45 +116,8 @@ struct DOPA{DL} <: αAminoAcid{DL} end # DOPA
 struct Peptide{T} <: AbstractPeptide
     chain::T
 end
-getchaincomponent(m::Peptide) = m.chain
-getchainlinkage(::Peptide) = missing
-ischainedchemical(::Peptide) = true
-ischainedchemical(::Type{<: Peptide}) = true
-requirelinkage(::Type{<: Peptide}) = false
-requireconfig(::Type{<: Peptide}) = false
-chainedchemical(::Type{<: Peptide}, chemicals; kwargs...) = Peptide(chemicals)
 
-getchainconfig(::Peptide) = missing
-getchainconfig(::αAminoAcid) = missing
-dehydrogenposition(::AbstractPeptide) = nothing
-dehydroxyposition(::AbstractPeptide) = nothing
-# dehydroxyposition(::Glutamate) = 0x01
-
-dehydroxygroup(::Alanine{L}; position = nothing) where L = Alanyl{L}()
-dehydroxygroup(::Arginine{L}; position = nothing) where L = Arginyl{L}()
-dehydroxygroup(::Aspargine{L}; position = nothing) where L = Asparginyl{L}()
-dehydroxygroup(::Aspartate{L}; position = nothing) where L = Aspartyl{L}()
-dehydroxygroup(::Cysteine{L}; position = nothing) where L = Cysteinyl{L}()
-dehydroxygroup(::Glutamine{L}; position = nothing) where L = Glutaminyl{L}()
-dehydroxygroup(::Glutamate{L}; position = nothing) where L = Glutamyl{L}()
-dehydroxygroup(::Glycine{L}; position = nothing) where L = Glycyl{L}()
-dehydroxygroup(::Histidine{L}; position = nothing) where L = Histidinyl{L}()
-dehydroxygroup(::Isoleucine{L}; position = nothing) where L = Isoleucyl{L}()
-dehydroxygroup(::Leucine{L}; position = nothing) where L = Leucyl{L}()
-dehydroxygroup(::Lysine{L}; position = nothing) where L = Lysyl{L}()
-dehydroxygroup(::Methionine{L}; position = nothing) where L = Methionyl{L}()
-dehydroxygroup(::Phenylalanine{L}; position = nothing) where L = Phenylalanyl{L}()
-dehydroxygroup(::Proline{L}; position = nothing) where L = Prolyl{L}()
-dehydroxygroup(::Serine{L}; position = nothing) where L = Seryl{L}()
-dehydroxygroup(::Threonine{L}; position = nothing) where L = Threonyl{L}()
-dehydroxygroup(::Tryptophan{L}; position = nothing) where L = Tryptophanyl{L}()
-dehydroxygroup(::Tyrosine{L}; position = nothing) where L = Tyrosyl{L}()
-dehydroxygroup(::Valine{L}; position = nothing) where L = Valyl{L}()
-dehydroxygroup(::Selenocysteine{L}; position = nothing) where L = Selenocysteinyl{L}()
-dehydroxygroup(::Pyrrolysine{L}; position = nothing) where L = Pyrrolysyl{L}()
-dehydroxygroup(::Ornithine{L}; position = nothing) where L = Ornithyl{L}() 
-dehydrogengroup(aa::αAminoAcid; position = nothing) = Substituent(Ndehydrogen, aa, isnothing(position) ? lk(dehydrogenposition(aa)) : position)
-conjugation(aa::αAminoAcid) = dehydroxygroup(aa)
+include("interface.jl")
 include("io.jl")
 
 end

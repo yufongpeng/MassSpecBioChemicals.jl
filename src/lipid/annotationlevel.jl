@@ -305,45 +305,8 @@ function annotationchain(dc::Union{DehydratedChemical, Glycan})
     trim_level_gap!(chain)
 end
 
-function annotationchain(c::T) where {T <: AbstractGlycan}
-    if hasfield(T, :isomer)
-        [
-            structuredefinedlevel,
-            structuredefinedpartiallevel,
-            dbconfiglevel,
-            dbconfigpartiallevel,
-            dbpositionlevel,
-            dbpositionpartiallevel,
-            passsnpositionlevel,
-            snpositionlevel,
-            passphosphatepositionlevel,
-            phosphatepositionlevel,
-            molecularspecieslevel,
-            specieslevel
-        ]
-    else
-        [
-            completestructurelevel,
-            fullstructurelevel,
-            structureconfiglevel,
-            structureconfigpartiallevel,
-            structurepositionlevel,
-            structurepositionpartiallevel,
-            structuredefinedlevel,
-            structuredefinedpartiallevel,
-            dbconfiglevel,
-            dbconfigpartiallevel,
-            dbpositionlevel,
-            dbpositionpartiallevel,
-            passsnpositionlevel,
-            snpositionlevel,
-            passphosphatepositionlevel,
-            phosphatepositionlevel,
-            molecularspecieslevel,
-            specieslevel
-        ]
-    end
-end
+annotationchain(c::T) where {T <: AbstractGlycan} = annotationchain(generic_glycan(c))
+
 # annotationchain(c::Glycan) = intersect!(annotationchain.(getchaincomponent(c))...)
 # check linkage
 annotationchain(c::GlyComp) = [

@@ -3,7 +3,7 @@ using Reexport
 using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
 import MassSpecChemicals: getchemicalattr
-import ..MassSpecBioChemicals: dehydroxyposition, dehydrogenposition, leavinggroup, leavinggroupelements, dehydrogengroup, dehydroxygroup, isdissociated, nlinkage
+import ..MassSpecBioChemicals: dehydroxyposition, dehydrogenposition, leavinggroup, leavinggroupelements, dehydrogengroup, dehydroxygroup, isdissociated, nlinkage, nbridge
 export BasicCompound, 
        isdissociated,
        Dihydrogen,
@@ -102,7 +102,7 @@ struct HydrogenOxide <: BasicCompound end
 struct OxygenAtom <: UnknownGroup{HydrogenOxide, Dehydrogen} end 
 struct Hydroxy <: FunctionalGroup{HydrogenOxide, Dehydrogen} end # OH
 struct OLinkage <: FunctionalGroup{Hydroxy, Dehydrogen} end # O...
-struct CarboxylicAcidGroup <: FunctionalGroup{FormicAcid, Demethyl} end # COOH
+struct CarboxylicAcidGroup <: FunctionalGroup{FormicAcid, Demethine} end # COOH
 struct CarboxylicLinkage <: FunctionalGroup{CarboxylicAcidGroup, Dehydroxy} end # CO...
 struct Oxo <: FunctionalGroup{HydrogenOxide, Didehydrogen} end # oxo 2
 struct Alkoxy <: FunctionalGroup{HydrogenOxide, Didehydrogen} end # oxy 2
@@ -153,29 +153,30 @@ getchemicalattr(::TriphosphoricAcid, ::Val{:name}; kwargs...) = "Triphosphoric a
 getchemicalattr(::SulfuricAcid, ::Val{:name}; kwargs...) = "Sulfuric acid"
 getchemicalattr(::NitricAcid, ::Val{:name}; kwargs...) = "Nitric acid"
 
-getchemicalattr(::Dihydrogen, ::Val{:formula}; kwargs...) = "H2"
-getchemicalattr(::Ethane, ::Val{:formula}; kwargs...) = "CH3CH3"
-getchemicalattr(::Ethanol, ::Val{:formula}; kwargs...) = "CH3CH2OH"
-getchemicalattr(::Methane, ::Val{:formula}; kwargs...) = "CH4" 
-getchemicalattr(::Methanol, ::Val{:formula}; kwargs...) = "CH3OH"
-getchemicalattr(::FormicAcid, ::Val{:formula}; kwargs...) = "HCOOH" 
-getchemicalattr(::Formamide, ::Val{:formula}; kwargs...) = "HCONH2"
-getchemicalattr(::AceticAcid, ::Val{:formula}; kwargs...) = "CH3COOH"
-getchemicalattr(::Acetamide, ::Val{:formula}; kwargs...) = "CH3CONH2"
-getchemicalattr(::HydrogenBromide, ::Val{:formula}; kwargs...) = "HBr"
-getchemicalattr(::HydrogenChloride, ::Val{:formula}; kwargs...) = "HCl"
-getchemicalattr(::HydrogenFluoride, ::Val{:formula}; kwargs...) = "HF"
-getchemicalattr(::HydrogenIodide, ::Val{:formula}; kwargs...) = "HI"
-getchemicalattr(::HydrogenOxide, ::Val{:formula}; kwargs...) = "H2O"
-getchemicalattr(::HydrogenPeroxide, ::Val{:formula}; kwargs...) = "HOOH"
-getchemicalattr(::Ammonia, ::Val{:formula}; kwargs...) = "NH3"
-getchemicalattr(::HydrogenSulfide, ::Val{:formula}; kwargs...) = "H2S"
-getchemicalattr(::HydrogenCyanide, ::Val{:formula}; kwargs...) = "HCN"
-getchemicalattr(::PhosphoricAcid, ::Val{:formula}; kwargs...) = "H3PO4"
-getchemicalattr(::DiphosphoricAcid, ::Val{:formula}; kwargs...) = "H4P2O7"
-getchemicalattr(::TriphosphoricAcid, ::Val{:formula}; kwargs...) = "H5P3O10" 
-getchemicalattr(::SulfuricAcid, ::Val{:formula}; kwargs...) = "H2SO4"
-getchemicalattr(::NitricAcid, ::Val{:formula}; kwargs...) = "HNO3"
+getchemicalattr(::Dihydrogen, ::Val{:elements}; kwargs...) = ["H" => 2]
+getchemicalattr(::Ethane, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "H" => 3]
+getchemicalattr(::Ethanol, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "H" => 2, "O" => 1, "H" => 1]
+getchemicalattr(::Methane, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 4] 
+getchemicalattr(::Methanol, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "O" => 1, "H" => 1]
+getchemicalattr(::FormicAcid, ::Val{:elements}; kwargs...) = ["H" => 1, "C" => 1, "O" => 1, "O" => 1, "H" => 1] 
+getchemicalattr(::Formamide, ::Val{:elements}; kwargs...) = ["H" => 1, "C" => 1, "O" => 1, "N" => 1, "H" => 2]
+getchemicalattr(::AceticAcid, ::Val{:elements}; kwargs...) =["C" => 1, "H" => 3, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Acetamide, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "O" => 1, "N" => 1, "H" => 2]
+getchemicalattr(::HydrogenBromide, ::Val{:elements}; kwargs...) = ["H" => 1, "Br" => 1]
+getchemicalattr(::HydrogenChloride, ::Val{:elements}; kwargs...) = ["H" => 1, "Cl" => 1]
+getchemicalattr(::HydrogenFluoride, ::Val{:elements}; kwargs...) = ["H" => 1, "F" => 1]
+getchemicalattr(::HydrogenIodide, ::Val{:elements}; kwargs...) = ["H" => 1, "I" => 1]
+getchemicalattr(::HydrogenOxide, ::Val{:elements}; kwargs...) = ["H" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::HydrogenPeroxide, ::Val{:elements}; kwargs...) = ["H" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Ammonia, ::Val{:elements}; kwargs...) = ["N" => 1, "H" => 3]
+getchemicalattr(::HydrogenSulfide, ::Val{:elements}; kwargs...) = ["H" => 2, "S" => 1]
+getchemicalattr(::HydrogenCyanide, ::Val{:elements}; kwargs...) = ["H" => 1, "C" => 1, "N" => 1]
+getchemicalattr(::PhosphoricAcid, ::Val{:elements}; kwargs...) = ["H" => 3, "P" => 1, "O" => 4]
+getchemicalattr(::DiphosphoricAcid, ::Val{:elements}; kwargs...) = ["H" => 4, "P" => 2, "O" => 7]
+getchemicalattr(::TriphosphoricAcid, ::Val{:elements}; kwargs...) = ["H" => 5, "P" => 3, "O" => 10]
+getchemicalattr(::SulfuricAcid, ::Val{:elements}; kwargs...) = ["H" => 2, "S" => 1, "O" => 4]
+getchemicalattr(::NitricAcid, ::Val{:elements}; kwargs...) = ["H" => 1, "N" => 1, "O" => 3]
+getchemicalattr(m::BasicCompound, ::Val{:formula}; unique = false, kwargs...) = chemicalformula(chemicalelements(m); unique, kwargs...)
 
 getchemicalattr(::Dihydrogen, ::Val{:SMILES}; kwargs...) = "[H2]"
 getchemicalattr(::Ethane, ::Val{:SMILES}; kwargs...) = "CC"
@@ -231,13 +232,44 @@ getchemicalattr(::NLinkage, ::Val{:abbreviation}; kwargs...) = "N"
 getchemicalattr(::Sulfanyl, ::Val{:abbreviation}; kwargs...) = "SH"
 getchemicalattr(::Cyano, ::Val{:abbreviation}; kwargs...) = "CN"
 getchemicalattr(::Phosphoryl, ::Val{:abbreviation}; kwargs...) = "P"
+getchemicalattr(::Substituent{Phosphoryl, Dehydroxy}, ::Val{:abbreviation}; kwargs...) = "P"
 getchemicalattr(::Diphosphoryl, ::Val{:abbreviation}; kwargs...) = "DP"
 getchemicalattr(::Triphosphoryl, ::Val{:abbreviation}; kwargs...) = "TP"
 getchemicalattr(::Sulfo, ::Val{:abbreviation}; kwargs...) = "S"
 # getchemicalattr(::Sulfate, ::Val{:abbreviation}; kwargs...) = "OSO3"
 getchemicalattr(::Nitro, ::Val{:abbreviation}; kwargs...) = "NO2"
 getchemicalattr(x::T, ::Val{:name}; group = true, kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = group ? string(T, " Group") : string(T)
-getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = vcat(chemicalelements(parentchemical(x)), leavinggroupelements(leavinggroup(x)))
+function getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} 
+	es = chemicalelements(parentchemical(x))
+	ls = leavinggroupelements(leavinggroup(x))
+	fn_f = length(ls) > 1  ? findlast : findfirst
+	for (e, n) in ls 
+		if n > 0
+			i = fn_f(x -> ==(first(x), e), es)
+			es[i] = e => (last(es[i]) + n)
+		else 
+			while n < 0 
+				i = fn_f(x -> ==(first(x), e), es)
+				es[i] = e => (last(es[i]) - 1)
+				n += 1
+				filter!(x -> last(x) > 0, es)
+			end
+		end
+	end
+	es
+end
+getchemicalattr(x::T, ::Val{:formula}; unique = false, kwargs...) where {T <: FunctionalGroup{<: BasicCompound}} = chemicalformula(chemicalelements(x); unique, kwargs...)
+
+getchemicalattr(x::OxygenAtom, ::Val{:elements}; kwargs...) = ["O" => 1]
+getchemicalattr(x::OxygenAtom, ::Val{:formula}; kwargs...) = "O"
+getchemicalattr(x::OLinkage, ::Val{:elements}; kwargs...) = ["O" => 1]
+getchemicalattr(x::OLinkage, ::Val{:formula}; kwargs...) = "O"
+getchemicalattr(x::NLinkage, ::Val{:elements}; kwargs...) = ["N" => 1, "H" => 1]
+getchemicalattr(x::NLinkage, ::Val{:formula}; kwargs...) = "NH"
+getchemicalattr(x::CarboxylicAcidGroup, ::Val{:elements}; kwargs...) = ["C" => -1, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(x::CarboxylicAcidGroup, ::Val{:formula}; kwargs...) = "OOH"
+getchemicalattr(x::CarboxylicLinkage, ::Val{:elements}; kwargs...) = ["C" => -1, "C" => 1, "O" => 1]
+getchemicalattr(x::CarboxylicLinkage, ::Val{:formula}; kwargs...) = "O"
 
 getchemicalattr(::Hydrogen, ::Val{:SMILES}; kwargs...) = "(H)"
 getchemicalattr(::Ethyl, ::Val{:SMILES}; kwargs...) = "(CC)"
@@ -269,6 +301,7 @@ getchemicalattr(::NLinkage, ::Val{:SMILES}; kwargs...) = "N"
 getchemicalattr(::Sulfanyl, ::Val{:SMILES}; kwargs...) = "(S)"
 getchemicalattr(::Cyano, ::Val{:SMILES}; kwargs...) = "(C#N)"
 getchemicalattr(::Phosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)O)"
+getchemicalattr(::Substituent{Phosphoryl, Dehydroxy}, ::Val{:SMILES}; kwargs...) = "(P(=O)(O))"
 getchemicalattr(::Diphosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)OP(=O)(O)O)"
 getchemicalattr(::Triphosphoryl, ::Val{:SMILES}; kwargs...) = "(P(=O)(O)OP(=O)(O)OP(=O)(O)O)"
 getchemicalattr(::Sulfo, ::Val{:SMILES}; kwargs...) = "(S(=O)(=O)O)"
@@ -305,6 +338,7 @@ isdissociated(::NLinkage) = true
 isdissociated(::Sulfanyl) = true
 isdissociated(::Cyano) = false
 isdissociated(::Phosphoryl) = true
+isdissociated(::Substituent{Phosphoryl, Dehydroxy}) = true
 isdissociated(::Diphosphoryl) = true
 isdissociated(::Triphosphoryl) = true
 isdissociated(::Sulfo) = true
@@ -350,9 +384,13 @@ dehydroxygroup(::SulfuricAcid; position = nothing) = Sulfo()
 dehydroxygroup(::NitricAcid; position = nothing) = Nitro()
 
 nlinkage(::CarboxylicAcidGroup) = 3
+nlinkage(::OxygenAtom) = 0
 nlinkage(::Alkoxy) = 1
+nbridge(::Alkoxy) = 1
 nlinkage(::Epoxy) = 1
+nbridge(::Epoxy) = 1
 nlinkage(::Peroxy) = 1
+nbridge(::Peroxy) = 1
 nlinkage(::XLinkedFunctionalGroup{CarboxylicLinkage}) = 3
 
 end

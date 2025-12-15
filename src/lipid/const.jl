@@ -22,16 +22,14 @@ const NAAA = [
     "Orn"
 ]
 const GLYCAN_CER = ["GlcCer", "GalCer", "LacCer"]
-const GLYCAN_AS_LIPID = ["GM3", "GM2", "GM1a", "GD1a", "GD1aα", "GD1aa", "GT1a", "GT1aα", "GT1aa", "GD3", "GD2", "GD1b", "GT1b", "GT1bα", "GT1ba", "GQ1b", "GQ1bα", "GQ1ba",
-"GT3", "GT2", "GT1c", "GQ1c", "GQ1cα", "GQ1ca", "GP1c", "GP1cα", "GP1ca", "GA2", "GA1", "GM1b", "GM1α", "GM1alpha", "GD1c", "GD1α", "GD1alpha", "GD1e", "GM1", "GD1", "GT1", "GQ1", "GP1", 
-"Gb3", "Gb4", "Gb5", "iGb3", "iGb4", "iGb5", "Lc3", "Lc4", "LM1", "nLc4", "nLc5",  "GM4", "SM4", "SM3", "SM2", "SM1", "SM1a", "SM1b", "SB1", "SB1a", "GM1?", "GD1?", "GT1?", "GQ1?"]
+const GLYCAN_AS_LIPID = filter(!=("Lac"), collect(keys(GLYCAN_STRUCT)))
 const FREESTEROL = ["C", "DSMS", "DC", "CAS", "BRS", "EGS", "DEGS", "SIS", "STS"]
 const CLASS = [
     "HC", "FA", "FAL", "FOH", "WE", "FAM", "FattyAmide", "FN", "FattyAmine", "NA", "NAE", "NAT", [string("NA", x) for x in NAAA]..., "CAR", "CoA", "FAHFA",
     "MG", "DG", "TG", "SQMG", "SQDG", "MGMG", "MGDG", "DGMG", "DGDG", "GlcAMG", "GlcADG",
     "PA", "LPA", "PC", "LPC", "PE", "LPE", "PE-NMe", "LPE-NMe", "PE-NMe2", "LPE-NMe2", "PE-N", "LPE-N", "PS", "LPS", "PS-N", "LPS-N", "PI", "LPI",
     "PG", "LPG", "PMeOH", "LPMeOH", "PEtOH", "LPEtOH", "GP", "LGP", "PIP", "LPIP", "PIP2", "LPIP2", "PIP3", "LPIP3", "PGP", "LPGP", "BPA", "SLBPA", "BMP", "LBPA", "CL", "MLCL", "DLCL", "GP-NAE", 
-    "Cer", "SPB", "CerP", "SPBP", "EPC", "LEPC", "PE-Cer", "PE-SPB", "IPC", "LIPC", "PI-Cer", "PI-SPB", "MIPC", "LMIPC", "M(IP)2C", "LM(IP)2C", "SM", "LSM",
+    "Cer", "SPB", "CerP", "SPBP", "EPC", "LEPC", "PE-Cer", "PE-SPB", "IPC", "LIPC", "PI-Cer", "PI-SPB", "MIPC", "LMIPC", "M(IP)2C", "LM(IP)2C", "SM", "LSM", "GlcCer", "GalCer", "LacCer", "GlcSPB", "GalSPB", "LacSPB", 
     GLYCAN_AS_LIPID..., [endswith(x, "Cer") ? replace(x, "Cer" => "SPB") : string("Lyso", x) for x in GLYCAN_AS_LIPID]..., "SL", "LSL", "ACer", "ASM", 
     "ST", "SE", "BA", "SG", "ASG", (FREESTEROL .* "E")..., "FC", FREESTEROL[begin + 1:end]...
 ]
@@ -41,10 +39,8 @@ const POST_MODIFIER = Dict{String, String}(
     "LPS-N" => "(\\([^)(]*+(?:(?3)[^)(]*)*+\\))",
     "PE-N"  => "(\\([^)(]*+(?:(?3)[^)(]*)*+\\))",
     "PS-N"  => "(\\([^)(]*+(?:(?3)[^)(]*)*+\\))",
-    "GM1?"   => "\\((.*)\\)",
-    "GD1?"   => "\\((.*)\\)",
-    "GT1?"   => "\\((.*)\\)",
-    "GQ1?"   => "\\((.*)\\)",
+    [sugar => "(.*)" for sugar in GLYCAN_AS_LIPID]...,
+    [string("Lyso-", sugar) => "(.*)" for sugar in GLYCAN_AS_LIPID]...,
     # "GP1?"   => "(\\(.*\\))",
     # "SM1?"   => "(\\(.*\\))",
 )
@@ -215,7 +211,7 @@ const CLASS_STRUCT = Dict{String, Function}(
     "GalSPB"    => class_struct_GalSPB,
     "LacSPB"    => class_struct_LacSPB,
     [sugar => class_struct_GSL for sugar in GLYCAN_AS_LIPID]...,
-    [string("Lyso", sugar) => class_struct_GSL for sugar in GLYCAN_AS_LIPID]...,
+    [string("Lyso-", sugar) => class_struct_LGSL for sugar in GLYCAN_AS_LIPID]...,
     "SL"    => class_struct_SL,
     "LSL"   => class_struct_LSL,
     "ACer"  => class_struct_ACer,

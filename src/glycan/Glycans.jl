@@ -6,10 +6,10 @@ using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
 import MassSpecChemicals: parse_chemical, getchemicalattr
 using ..MassSpecBioChemicals.Proteins: parse_aa_fg
-using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup
+using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup, ntotallinkage, leavinggroupelements
 using IterTools
-import Base: show
-import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem
+import Base: show, length
+import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem, losswaterelements
 export Saccharide, Monosaccharide, 
         AbstractHexose, Hexose, Glucose, Mannose, Galactose, Gulose, Altose, Allose, Talose, Idose, Apiose, Fructose, Tagatose, Sorbose, Psicose, 
         AbstractHexosamine, Hexosamine, Glucosamine, Mannosamine, Galactosamine, Gulosamine, Altosamine, Allosamine, Talosamine, Idosamine, 
@@ -19,12 +19,12 @@ export Saccharide, Monosaccharide,
         AbstractDideoxyhexose, Dideoxyhexose, 
         AbstractHexuronicAcid, HexuronicAcid, GlucuronicAcid, MannuronicAcid, GalacturonicAcid, GuluronicAcid, AlturonicAcid, AlluronicAcid, TaluronicAcid, IduronicAcid, 
         NonulosonicAcid, SialicAcid, NeuraminicAcid, NacetylneuraminicAcid, NglycolylneuraminicAcid, Kdn,
-        DideoxynonulosonicAcid, LegionaminicAcid, FourepilegionaminicAcid, EightepilegionaminicAcid, AcinetaminicAcid, EightepiacinetaminicAcid, PseudaminicAcid, 
+        DiaminodideoxynonulosonicAcid, LegionaminicAcid, FourepilegionaminicAcid, EightepilegionaminicAcid, AcinetaminicAcid, EightepiacinetaminicAcid, PseudaminicAcid, 
 
         AbstractPentose, Pentose, Arabinose, Lyxose, Xylose, Ribose, AbstractDeoxypentose, Deoxypentose, Deoxyribose, 
         Inositol, 
 
-        AbstractGlycan, Glycan, GlyComp,
+        AbstractGlycan, SeriesGlycan, Glycan, GlyComp,
         AbstractAnomerposition, Anomerposition, Alphaposition, Betaposition,
         LinearForm, 
         PyranoseForm, 
@@ -32,6 +32,7 @@ export Saccharide, Monosaccharide,
         CycliceForm, 
         Deoxy, 
         Epi, 
+        
         SimpleGlcseries,
         GM4,
         SM4,
@@ -92,17 +93,82 @@ export Saccharide, Monosaccharide,
         Gb3,
         Gb4,
         Gb5,
+        CytolipinK,
+        SSEA3Antigen,
+        SSEA4Antigen,
+        SSEA4α6Antigen,
+        SSEA4a6Antigen,
+        TypeIVHAntigen,
+        TypeIVAAntigen,
+        TypeIVBAntigen,
+        ForssmanAntigen,
+        ParaForssmanAntigen,
+        BranchedForssmanAntigen,
+        GloboLex9,
+
         Isogloboseries,
         iGb3,
         iGb4,
         iGb5,
+        ForssmanlikeiGb4,
+        CytolipinR,
+
         Lactoseries,
         Lc3,
         Lc4,
+        Lea,
+        Leb,
+        TypeIHAntigen,
+        TypeIAAntigen,
+        Aleb,
+        TypeIBAntigen,
+        Bleb,
+        LexA,
+        LeyA,
+        LexA9,
+        LeyA9,
         LM1,
+        sLea,
+        dsLea,
+
         Neolactoseries,
         nLc4,
-        nLc5
+        nLc5,
+        nLc6,
+        IAntigen,
+        TypeIIH7Antigen,
+        TypeIIA8Antigen,
+        TypeIIB8Antigen,
+        nLM1,
+        TypeIIHAntigen,
+        TypeIIAAntigen,
+        TypeIIBAntigen,
+        iAntigen,
+        Lex,
+        Ley,
+        Lex5,
+        Ley6,
+        SSEA1Antigen,
+        Lex7,
+        LexX,
+        LexX8,
+        DimericLex8,
+        Ley8,
+        LeyX,
+        LeyX9,
+        TrimericLey9,
+        Lex9,
+        LexX10,
+        DimericLex10,
+        LexXX,
+        LexXX11,
+        TrimericLex11,
+        LeaX,
+        LebX,
+        sLex,
+        sLex6,
+        sLeaX,
+        PAntigen
 
         
 abstract type Saccharide <: AbstractChemical end
@@ -118,7 +184,8 @@ abstract type AbstractNacetyldeoxyhexosamine{D, P, T} <: Monosaccharide{D, P, T}
 abstract type AbstractDideoxyhexose{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type NonulosonicAcid{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type SialicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
-abstract type DideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
+# abstract type DideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
+abstract type DiaminodideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
 abstract type AbstractPentose{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type AbstractDeoxypentose{D, P, T} <: Monosaccharide{D, P, T} end
 
@@ -151,7 +218,7 @@ Vector{<: Pair{UInt8, <: FunctionalGroup}}
 
 # Unknown 
 # LDManHep, DDManHep = 6eLDManHep
-# Kdo = 3d5eDDManHep1COOH or 3dDDGalHep1COOH
+# Kdo = 3d5eDDManHep1COOH or 3dDDGalHep1COOH, octanulosonic acid
 # Dha: 3dGalA1COOH
 
 # Bac: 2,4N,6dGlc
@@ -169,11 +236,24 @@ Inositol() = Inositol{Nothing, CycliceForm, Nothing}(nothing)
 Inositol(x::T) where T = Inositol{Nothing, CycliceForm, T}(x)
 
 abstract type AbstractGlycan <: Saccharide end
-abstract type SimpleGlcseries <: AbstractGlycan end
+struct SeriesGlycan{G, T} <: AbstractGlycan 
+    type::G
+    substituent::T
+end
+# FG => # 
+# MS => #
+# p => MS
+# GD1a(3[3]Neu5,?Ac/6[4]NeuGc)
+# GT1?b/ba(Ac2)
+# GD1b((NeuAc2)2)
+
+abstract type GlycanType end
+abstract type SimpleGlcseries <: GlycanType end
 struct GM4 <: SimpleGlcseries end
 struct SM4 <: SimpleGlcseries end
-struct Lac <: SimpleGlcseries end #?
-abstract type Ganglioseries <: AbstractGlycan end
+struct Lac <: SimpleGlcseries end #
+
+abstract type Ganglioseries <: GlycanType end
 abstract type Sulfoganglioseries <: Ganglioseries end
 struct SM3 <: Sulfoganglioseries end
 struct SM2 <: Sulfoganglioseries end
@@ -278,21 +358,93 @@ function GP1(isomer...)
     GP1(isomer)
 end
 
-abstract type Globoseries <: AbstractGlycan end
+# GalNAcα1-4
+# Galα1-3
+# O-acetyl 
+# NeuGc/Kdn
+# Fucα1-2
+
+abstract type Globoseries <: GlycanType end
 struct Gb3 <: Globoseries end
 struct Gb4 <: Globoseries end
 struct Gb5 <: Globoseries end
-abstract type Isogloboseries <: AbstractGlycan end
+const CytolipinK = Gb4
+const SSEA3Antigen = Gb5
+struct SSEA4Antigen <: Globoseries end
+struct SSEA4α6Antigen <: Globoseries end
+const SSEA4a6Antigen = SSEA4α6Antigen
+struct TypeIVHAntigen <: Globoseries end
+struct TypeIVAAntigen <: Globoseries end
+struct TypeIVBAntigen <: Globoseries end
+struct ForssmanAntigen <: Globoseries end
+struct ParaForssmanAntigen <: Globoseries end
+struct BranchedForssmanAntigen <: Globoseries end
+struct GloboLex9 <: Globoseries end
+
+abstract type Isogloboseries <: GlycanType end
 struct iGb3 <: Isogloboseries end
 struct iGb4 <: Isogloboseries end
 struct iGb5 <: Isogloboseries end
-abstract type Lactoseries <: AbstractGlycan end
+struct ForssmanlikeiGb4 <: Isogloboseries end
+const CytolipinR = iGb4
+
+abstract type Lactoseries <: GlycanType end
 struct Lc3 <: Lactoseries end
 struct Lc4 <: Lactoseries end
+struct Lea <: Lactoseries end
+struct Leb <: Lactoseries end
+struct TypeIHAntigen <: Lactoseries end
+struct TypeIAAntigen <: Lactoseries end
+struct Aleb <: Lactoseries end
+struct TypeIBAntigen <: Lactoseries end
+struct Bleb <: Lactoseries end
+struct LexA <: Lactoseries end
+struct LeyA <: Lactoseries end
+const LexA9 = LexA
+const LeyA9 = LeyA
 struct LM1 <: Lactoseries end
-abstract type Neolactoseries <: AbstractGlycan end
-struct nLc4 <: Lactoseries end
-struct nLc5 <: Lactoseries end
+struct sLea <: Lactoseries end
+struct dsLea <: Lactoseries end
+
+abstract type Neolactoseries <: GlycanType end
+struct nLc4 <: Neolactoseries end
+struct nLc5 <: Neolactoseries end
+struct nLc6 <: Neolactoseries end
+struct IAntigen <: Neolactoseries end
+struct TypeIIH7Antigen <: Neolactoseries end
+struct TypeIIA8Antigen <: Neolactoseries end
+struct TypeIIB8Antigen <: Neolactoseries end
+struct nLM1 <: Neolactoseries end
+struct TypeIIHAntigen <: Neolactoseries end
+struct TypeIIAAntigen <: Neolactoseries end
+struct TypeIIBAntigen <: Neolactoseries end
+const iAntigen = nLc6
+struct Lex <: Neolactoseries end
+struct Ley <: Neolactoseries end
+const Lex5 = Lex
+const Ley6 = Ley
+const SSEA1Antigen = Lex5
+struct Lex7 <: Neolactoseries end
+struct LexX <: Neolactoseries end
+const LexX8 = LexX
+const DimericLex8 = LexX8
+struct Ley8 <: Neolactoseries end
+struct LeyX <: Neolactoseries end
+const LeyX9 = LeyX
+const TrimericLey9 = LeyX9
+struct Lex9 <: Neolactoseries end
+struct LexX10 <: Neolactoseries end
+const DimericLex10 = LexX10
+struct LexXX <: Neolactoseries end
+const LexXX11 = LexXX
+const TrimericLex11 = LexXX11
+struct LeaX <: Neolactoseries end
+struct LebX <: Neolactoseries end
+struct sLex <: Neolactoseries end
+const sLex6 = sLex
+struct sLeaX <: Neolactoseries end
+struct PAntigen <: Neolactoseries end
+
 
 """
     Glycan{T} <: AbstractGlycan
@@ -303,7 +455,8 @@ struct Glycan{T} <: AbstractGlycan
     chain::T
     linkage::Vector{Pair{AbstractAnomerposition, Linkageposition}}
 end
-Glycan(sugar::Vararg{<: Saccharide}) = Glycan(sugar, Pair{AbstractAnomerposition, UInt8}[])
+Glycan(sugar::Vararg{<: Saccharide}) = Glycan(sugar, Pair{AbstractAnomerposition, Linkageposition}[])
+Glycan(sugar::T, linkage::Vector) where T = Glycan(sugar, convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, linkage))
 #= Tuple: order, length of linkage == chain, defined reducing end anomer, 
 S::UInt8
 
@@ -316,9 +469,50 @@ struct GlyComp{T} <: AbstractGlycan
     comp::Vector{Pair{T, UInt8}}
 end
 # Vector{Pair{Monosaccharide, UInt8}}: type => number, no order
-
+GlyComp(sugar::SeriesGlycan, s = nothing) = GlyComp(generic_glycan(sugar), s)
+function GlyComp(sugar::GlyComp, s = nothing)
+    d = Dict{Monosaccharide, UInt8}()
+    push_monosaccharide!(d, sugar)
+    if !isnothing(s)
+        for (m, n) in s 
+            push_monosaccharide!(d, m, n)
+        end
+    end
+    filter!(x -> last(x) > 0, d)
+    GlyComp(collect(pairs(d)))
+end
+function GlyComp(sugar::Glycan, s = nothing)
+    d = Dict{Monosaccharide, UInt8}()
+    push_monosaccharide!(d, sugar)
+    if !isnothing(s)
+        for (m, n) in s 
+            push_monosaccharide!(d, m, n)
+        end
+    end
+    filter!(x -> last(x) > 0, d)
+    GlyComp(collect(pairs(d)))
+end
+function push_monosaccharide!(d, s::Monosaccharide, x = 0x01) 
+    n = get!(d, s, 0x00)
+    d[s] = n + x
+end
+function push_monosaccharide!(d, s::Glycan) 
+    for i in getchaincomponent(s)
+        push_monosaccharide!(d, i)
+    end
+end
+function push_monosaccharide!(d, s::GlyComp) 
+    for (x, i) in getchaincomponent(s)
+        push_monosaccharide!(d, x, i)
+    end
+end
 implicit_config(x) = false
+implicit_config(::Abequose) = true
+implicit_config(::Paratose) = true
+implicit_config(::Tyvelose) = true
+implicit_config(::Colitose) = true
 implicit_config(::SialicAcid) = true
+implicit_config(::DiaminodideoxynonulosonicAcid) = true
 implicit_config(::SimpleGlcseries) = true
 implicit_config(::Ganglioseries) = true
 implicit_config(::Globoseries) = true
@@ -326,7 +520,8 @@ implicit_config(::Isogloboseries) = true
 implicit_config(::Lactoseries) = true
 implicit_config(::Neolactoseries) = true
 
-# D for Abe, Bac, Dha, Kdo, Mur, Par, Tyv; L for Col
+# D for Abe, Bac, Dha, Kdo, Mur, Par, Tyv; L for Col; DD for Kdn, Neu, Leg, 4eLeg; LL for Pse, Aci; LD for 8eLeg; DL for 8eAci
+include("glycan.jl")
 include("interface.jl")
 include("io.jl")
 end

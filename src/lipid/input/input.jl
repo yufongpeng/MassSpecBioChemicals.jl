@@ -196,8 +196,13 @@ function make_lipid(Con::Type{<: SphingoBone}, bone, pos, chain, sn)
         else
             sub = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, fc.substituent)
         end
-        for p in poss
-            push!(sub, first(p) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)))
+        if length(poss) > 1 
+            push!(sub, first(first(poss)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(bone))))
+            for p in poss[2:end]
+                push!(sub, first(p) => XLinkedFunctionalGroup(OLinkage(), NullSubstituent()))
+            end
+        else
+            push!(sub, first(first(poss)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)))
         end
         sort_chainmodification!(sub) 
         if (0x02 => Hydrogen()) in sub 
@@ -217,13 +222,32 @@ function make_lipid(Con::Type{<: SphingoBone}, bone, pos, chain, sn)
         else
             sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
         end
-        m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone))
-        id = findfirst(x -> first(x) == m, fc.substituent)
-        if isnothing(id)
-            push!(sub, m => UInt8(length(poss)))
+        if length(poss) > 1
+            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(bone)))
+            id = findfirst(x -> first(x) == m, sub)
+            if isnothing(id)
+                push!(sub, m => 0x01)
+            else
+                n = last(sub[id])
+                sub[id] = m => (n + 0x01)
+            end
+            m = XLinkedFunctionalGroup(OLinkage(), NullSubstituent())
+            id = findfirst(x -> first(x) == m, sub)
+            if isnothing(id)
+                push!(sub, m => UInt8(length(poss) - 1))
+            else
+                n = last(sub[id])
+                sub[id] = m => (n + UInt8(length(poss) - 1))
+            end
         else
-            n = last(sub[id])
-            sub[id] = m => (n + UInt8(length(poss)))
+            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone))
+            id = findfirst(x -> first(x) == m, sub)
+            if isnothing(id)
+                push!(sub, m => 0x01)
+            else
+                n = last(sub[id])
+                sub[id] = m => (n + 0x01)
+            end
         end
         sort_chainmodification!(sub)
         headposition = [first(p) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)) for p in poss]
@@ -271,9 +295,13 @@ function make_lipid(Con::Type{<: MixSphingoBone}, bone, pos, chain, sn)
         end
         length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
         for (b, p) in zip(bone, poss)
-            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
-            for x in p
-                push!(sub, first(x) => m)
+            if length(p) > 1 
+                push!(sub, first(first(p)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(b))))
+                for x in poss[2:end]
+                    push!(sub, first(x) => XLinkedFunctionalGroup(OLinkage(), NullSubstituent()))
+                end
+            else
+                push!(sub, first(first(p)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b)))
             end
         end
         push!(sub, 0x02 => Hydrogen())
@@ -296,13 +324,32 @@ function make_lipid(Con::Type{<: MixSphingoBone}, bone, pos, chain, sn)
         end
         length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
         for (b, p) in zip(bone, poss)
-            m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
-            id = findfirst(x -> first(x) == m, fc.substituent)
-            if isnothing(id)
-                push!(sub, m => UInt8(length(p)))
+            if length(p) > 1
+                m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(b)))
+                id = findfirst(x -> first(x) == m, sub)
+                if isnothing(id)
+                    push!(sub, m => 0x01)
+                else
+                    n = last(sub[id])
+                    sub[id] = m => (n + 0x01)
+                end
+                m = XLinkedFunctionalGroup(OLinkage(), NullSubstituent())
+                id = findfirst(x -> first(x) == m, sub)
+                if isnothing(id)
+                    push!(sub, m => UInt8(length(p) - 1))
+                else
+                    n = last(sub[id])
+                    sub[id] = m => (n + UInt8(length(p) - 1))
+                end
             else
-                n = last(sub[id])
-                sub[id] = m => (n + UInt8(length(p)))
+                m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
+                id = findfirst(x -> first(x) == m, sub)
+                if isnothing(id)
+                    push!(sub, m => 0x01)
+                else
+                    n = last(sub[id])
+                    sub[id] = m => (n + 0x01)
+                end
             end
         end
         sort_chainmodification!(sub)

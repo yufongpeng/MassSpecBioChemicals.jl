@@ -1,10 +1,11 @@
 parentchemical(m::AbstractChemical) = m
 parentchemical(sil::IsotopiclabeledChemical) = sil.chemical
-parentchemical(fg::Substituent) = fg.chemical
+parentchemical(fg::Substituent) = parentchemical(fg.chemical)
 parentchemical(sm::SubstitutedChemical) = sm.chemical
 parentchemical(::FunctionalGroup{M}) where M = M()
 parentchemical(x::XLinkedFunctionalGroup) = parentchemical(x.functionalgroup)
 parentchemical(::M) where {M <: UnknownGroup} = UnknownChemical{M}()
+
 leavinggroup(::FunctionalGroup{M, S}) where {M, S} = S()
 function dehydrogengroup(m; position = nothing) 
     if isnothing(position) || ismissing(position)
@@ -42,7 +43,22 @@ leavinggroupelements(::Ndehydrogen) = ["H" => -1]
 leavinggroupelements(::Didehydrogen) = ["H" => -2]
 leavinggroupelements(::Dehydroxy) = ["O" => -1, "H" => -1]
 leavinggroupelements(::Deamine) = ["N" => -1, "H" => -2]
-leavinggroupelements(::Demethyl) = ["C" => -1, "H" => -3]
+leavinggroupelements(::Demethine) = ["C" => -1, "H" => -1]
+
+function losswaterelements(m::AbstractChemical, p, q)
+    e = chemicalelements(m)
+    if p != 1 
+        i = findfirst(x -> first(x) == "H", e)
+        e[i] = "H" => (last(e[i]) - 1)
+    end
+    if q != 0
+        i = findlast(x -> first(x) == "O", e)
+        e[i] = "O" => (last(e[i]) - 1)
+        i = findlast(x -> first(x) == "H", e)
+        e[i] = "H" => (last(e[i]) - 1)
+    end
+    filter!(x -> last(x) != 0, e)
+end
 
 dehydrogenposition(a::AbstractChemical) = 0x00
 dehydrogenposition(a::DehydratedChemical) = dehydrogenposition(first(getchaincomponent(a)))
@@ -69,7 +85,26 @@ nlinkage(::AbstractFunctionalGroup) = 1
 nlinkage(::FunctionalGroup) = 1
 nlinkage(::FunctionalGroup{T, Didehydrogen}) where T = 2
 nlinkage(::XLinkedFunctionalGroup) = 1
+nbridge(::AbstractFunctionalGroup) = 0
+ntotallinkage(x) = nlinkage(x) + nbridge(x)
 
+composition(m::AbstractChemical) = Dict{AbstractChemical, UInt8}(m => 0x01)
+function composition(m::ChainedChemical) 
+    d = Dict{AbstractChemical, UInt8}()
+    for c in getchaincomponent(m)
+        get!(d, c, 0x00)
+        d[c] += 0x01 
+    end
+    d 
+end
+function composition(m::DehydratedChemical) 
+    d = Dict{AbstractChemical, UInt8}()
+    for c in getchaincomponent(m)
+        get!(d, c, 0x00)
+        d[c] += 0x01 
+    end
+    d 
+end
 getchaincomponent(m::AbstractChemical) = (m, )
 getchaincomponent(m::ChainedChemical) = m.chain
 getchaincomponent(m::DehydratedChemical) = m.chain
@@ -93,7 +128,3 @@ requireconfig(m::Type{<: ChainedChemical}) = true
 requireconfig(m::Type{<: DehydratedChemical}) = true
 
 isdissociated(fg) = false
-
-getchemicalattr(x::Substituent{<: T, <: Union{Dehydrogen, Odehydrogen, Ndehydrogen}}, ::Val{:SMILES}; kwargs...) where T = getchemicalattr(x.chemical, :SMILES; kwargs...)
-getchemicalattr(x::Substituent{<: T, <: Dehydroxy}, ::Val{:SMILES}; kwargs...) where T = replace(getchemicalattr(x.chemical, :SMILES; kwargs...), r"^O" => "")
-getchemicalattr(x::XLinkedFunctionalGroup, ::Val{:SMILES}; kwargs...) = string("(", getchemicalattr(x.xlinkage, :SMILES; kwargs...), replace(getchemicalattr(x.functionalgroup, :SMILES; kwargs...), r"^\(" => "", r"\)$" => ""), ")")

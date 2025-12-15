@@ -1,55 +1,47 @@
 """
 """
-function parse_glycomp(s::AbstractString)
-    result = Pair{Monosaccharide, UInt8}[]
-    GlyComp(sort!(iter_glycomp!(result, s); by = repr ∘ first))
+function parse_glycomp2(s::AbstractString)
+    parse_glycomp(replace(s, r"^SHex" => "Hex3S"))
 end
 
-function iter_glycomp!(result::Vector{Pair{Monosaccharide, UInt8}}, s::AbstractString)
-    @inbounds for i in Iterators.reverse(eachindex(s))
-        try
-            mono = parse_monoglycomp(s[begin:i])
-            if i == lastindex(s)
-                push!(result, mono => 0x01)
-                return result
-            else
-                s = string(s[nextind(s, i):end])
-                n = match(r"^\d+", s)
-                if isnothing(n)
-                    push!(result, mono => 0x01)
-                    return iter_glycomp!(result, s)
-                else
-                    i = n.match.offset + n.match.ncodeunits
-                    n = parse(UInt8, n.match)
-                    push!(result, mono => n)
-                    return i == lastindex(s) ? result : iter_glycomp!(result, s[nextind(s, i):end])
-                end
-            end
-        catch
-            continue
-        end
-    end
-    throw(ArgumentError("Invalid monosaccharide(s), \"$s\""))
-end
+# function iter_glycomp!(result::Vector{Pair{Monosaccharide, UInt8}}, s::AbstractString)
+#     @inbounds for i in Iterators.reverse(eachindex(s))
+#         try
+#             mono = parse_monoglycomp(s[begin:i])
+#             if i == lastindex(s)
+#                 push!(result, mono => 0x01)
+#                 return result
+#             else
+#                 s = string(s[nextind(s, i):end])
+#                 n = match(r"^\d+", s)
+#                 if isnothing(n)
+#                     push!(result, mono => 0x01)
+#                     return iter_glycomp!(result, s)
+#                 else
+#                     i = n.match.offset + n.match.ncodeunits
+#                     n = parse(UInt8, n.match)
+#                     push!(result, mono => n)
+#                     return i == lastindex(s) ? result : iter_glycomp!(result, s[nextind(s, i):end])
+#                 end
+#             end
+#         catch
+#             continue
+#         end
+#     end
+#     throw(ArgumentError("Invalid monosaccharide(s), \"$s\""))
+# end
 
-function parse_monoglycomp(s::AbstractString)
-    try
-        parse_monosaccharide(s)
-    catch
-        s == "SHex" && return Hexose([Sulfo() => 0x01])
-        throw(ArgumentError("Invalid monosaccharide, \"$s\""))
-    end
-end
+# function parse_monoglycomp(s::AbstractString)
+#     try
+#         parse_monosaccharide(s)
+#     catch
+#         s == "SHex" && return Hexose([Sulfo() => 0x01])
+#         throw(ArgumentError("Invalid monosaccharide, \"$s\""))
+#     end
+# end
 
 function parse_gsl_isomer(cls, post)
-    if endswith(cls, "?")
-        iso = [replace(x, "alpha" => "α") for x in split(post, r"\s*,\s*")]
-        sort!(iso)
-        c = cls[begin:end - 1]
-        eval(Meta.parse(cls))(ntuple(i -> eval((string(c, iso[i])))(), length(iso)))
-    else
-        eval(Meta.parse(replace(cls, "alpha" => "α")))() 
-    end
+    parse_series_glycan(string(cls, isnothing(post) ? "" : post))
 end
 
 """

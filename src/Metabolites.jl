@@ -22,7 +22,9 @@ export Metabolite,
        PyruvicAcid, 
        Pyruvyl, # Py
        Glycerol,
-       Glyceryl # Gr
+       Glyceryl, # Gr
+       Serotonin, 
+       Melatonin
 
 abstract type Metabolite <: AbstractChemical end
 struct Ethanolamine <: Metabolite end
@@ -43,6 +45,8 @@ struct PyruvicAcid <: Metabolite end
 struct Pyruvyl <: FunctionalGroup{PyruvicAcid, Dehydroxy} end # Py
 struct Glycerol{R} <: Metabolite end
 struct Glyceryl{R} <: FunctionalGroup{Glycerol{R}, Dehydrogen} end # Gr
+struct Serotonin{R} <: Metabolite end # 5HT 
+struct Melatonin{R} <: Metabolite end # MT 
 # TCA cycle
 # Seotonin, melanin
 # Norepinephrine, epinephrine, 
@@ -61,6 +65,8 @@ chiralchemical(::Type{Lactyl}, ::Type{RChirality}) = Lactyl{DForm}()
 chiralchemical(::Type{Lactyl}, ::Type{SChirality}) = Lactyl{LForm}()
 chiralchemical(::Type{Glycerol}, ::Type{I}) where {I <: RSChirality} = Glycerol{I}()
 chiralchemical(::Type{Glyceryl}, ::Type{I}) where {I <: RSChirality} = Glyceryl{I}()
+chiralchemical(::Type{Serotonin}, ::Type{I}) where {I <: RSChirality} = Serotonin{I}()
+chiralchemical(::Type{Melatonin}, ::Type{I}) where {I <: RSChirality} = Melatonin{I}()
 
 dehydrogengroup(::Taurine; position = nothing) = Tauryl()
 dehydroxygroup(::GlycolicAcid; position = nothing) = Glycolyl()
@@ -88,20 +94,26 @@ getchemicalattr(::PyruvicAcid, ::Val{:name}; kwargs...) = "Pyruvic acid"
 getchemicalattr(::Glycerol, ::Val{:name}; kwargs...) = "Glycerol"
 getchemicalattr(::Glycerol{RChirality}, ::Val{:name}; kwargs...) = "(R)-Glycerol"
 getchemicalattr(::Glycerol{SChirality}, ::Val{:name}; kwargs...) = "(S)-Glycerol"
+getchemicalattr(::Serotonin, ::Val{:name}; kwargs...) = "Serotonin"
+getchemicalattr(::Melatonin, ::Val{:name}; kwargs...) = "Melatonin"
 
-getchemicalattr(::Ethanolamine, ::Val{:formula}; kwargs...) = "HOCH2CH2NH2"
-getchemicalattr(::Nmethylethanolamine, ::Val{:formula}; kwargs...) = "CH3NHCH2CH2OH"
-getchemicalattr(::NNdimethylethanolamine, ::Val{:formula}; kwargs...) = "(CH3)2NCH2CH2OH"
-getchemicalattr(::GABA, ::Val{:formula}; kwargs...) = "H2N(CH2)3COOH"
-getchemicalattr(::Dopamine, ::Val{:formula}; kwargs...) = "C8H11NO2"
-getchemicalattr(::Taurine, ::Val{:formula}; kwargs...) = "H3NCH2CH2SO3"
-getchemicalattr(::Carnitine, ::Val{:formula}; kwargs...) = "(CH3)3NCH2CHOHCH2COO"
-getchemicalattr(::Choline, ::Val{:formula}; kwargs...) = "(CH3)3NCH2CH2OH"
-getchemicalattr(::CoA, ::Val{:formula}; kwargs...) = "C21H36N7O16P3S"
-getchemicalattr(::GlycolicAcid, ::Val{:formula}; kwargs...) = "HOCH2COOH"
-getchemicalattr(::LacticAcid, ::Val{:formula}; kwargs...) = "CH3CHOHCOOH"
-getchemicalattr(::PyruvicAcid, ::Val{:formula}; kwargs...) = "CH3COCOOH"
-getchemicalattr(::Glycerol, ::Val{:formula}; kwargs...) = "HOCH2CHOHCH2OH"
+
+getchemicalattr(::Ethanolamine, ::Val{:elements}; kwargs...) = ["H" => 2, "N" => 1, "C" => 2, "H" => 4, "O" => 1, "H" => 1]
+getchemicalattr(::Nmethylethanolamine, ::Val{:elements}; kwargs...) = ["H" => 1, "C" => 1, "H" => 3, "N" => 1, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "O" => 1, "H" => 1]
+getchemicalattr(::NNdimethylethanolamine, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "H" => 3, "N" => 1, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "O" => 1, "H" => 1]
+getchemicalattr(::GABA, ::Val{:elements}; kwargs...) = ["H" => 2, "N" => 1, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Dopamine, ::Val{:elements}; kwargs...) = ["H" => 2, "N" => 1, "C" => 2, "H" => 4, "C" => 6, "H" => 3, "O" => 1, "H" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Taurine, ::Val{:elements}; kwargs...) = ["H" => 2, "N" => 1, "C" => 2, "H" => 4, "S" => 1, "O" => 2, "O" => 1, "H" => 1]
+getchemicalattr(::Carnitine, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "H" => 3, "C" => 1, "H" => 3, "N" => 1, "C" => 3, "H" => 5, "O" => 1, "H" => 1, "C" => 1, "O" => 1, "O" => 1]
+getchemicalattr(::Choline, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "H" => 3, "C" => 1, "H" => 3, "N" => 1, "C" => 2, "H" => 3, "O" => 1, "H" => 1]
+getchemicalattr(::CoA, ::Val{:elements}; kwargs...) = ["H" => 1, "S" => 1, "C" => 2, "H" => 4, "N" => 1, "H" => 1, "C" => 1, "O" => 1, "C" => 2, "H" => 4, "N" => 1, "H" => 1, "C" => 1, "O" => 1, "C" => 5, "H" => 9, "O" => 1, "H" => 1, "O" => 1, "P" => 2, "O" => 3, "O" => 1, "H" => 1, "O" => 1, "H" => 1, "C" => 5, "H" => 8, "O" => 3, "O" => 1, "P" => 1, "O" => 1, "O" => 1, "H" => 1, "O" => 1, "H" => 1, "C" => 5, "H" => 2, "N" => 4, "N" => 1, "H" => 2]
+getchemicalattr(::GlycolicAcid, ::Val{:elements}; kwargs...) = ["H" => 1, "O" => 1, "C" => 1, "H" => 2, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::LacticAcid, ::Val{:elements}; kwargs...) = ["H" => 1, "O" => 1, "C" => 1, "H" => 3, "C" => 1, "H" => 1, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::PyruvicAcid, ::Val{:elements}; kwargs...) = ["C" => 1, "H" => 3, "C" => 1, "O" => 1, "C" => 1, "O" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Glycerol, ::Val{:elements}; kwargs...) = ["H" => 1, "O" => 1, "C" => 3, "H" => 5, "O" => 1, "H" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Serotonin, ::Val{:elements}; kwargs...) = ["H" => 2, "N" => 1, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "C" => 8, "H" => 5, "N" => 1, "O" => 1, "H" => 1]
+getchemicalattr(::Melatonin, ::Val{:elements}; kwargs...) = ["H" => 1, "N" => 1, "C" => 1, "O" => 1, "C" => 1, "H" => 3, "C" => 1, "H" => 2, "C" => 1, "H" => 2, "C" => 8, "H" => 5, "N" => 1, "O" => 1, "C" => 1, "H" => 3]
+getchemicalattr(m::Metabolite, ::Val{:formula}; unique = false, kwargs...) = chemicalformula(chemicalelements(m); unique, kwargs...)
 
 getchemicalattr(::Ethanolamine, ::Val{:SMILES}; kwargs...) = "NCCO"
 getchemicalattr(::Nmethylethanolamine, ::Val{:SMILES}; kwargs...) = "CNCCO"
@@ -134,6 +146,9 @@ function getchemicalattr(::Glycerol, ::Val{:SMILES}; chain = (:O1, :C3))
         "OCC(O)CO"
     end
 end
+getchemicalattr(::Serotonin, ::Val{:SMILES}; kwargs...) = "NCCC1=CNC2=C1C=C(C=C2)O"
+getchemicalattr(::Melatonin, ::Val{:SMILES}; kwargs...) = "N(C(=O)C)CCC1=CNC2=C1C=C(C=C2)OC"
+
 
 getchemicalattr(::Tauryl, ::Val{:abbreviation}; kwargs...) = "Tau"
 getchemicalattr(::Glycolyl, ::Val{:abbreviation}; kwargs...) = "Gc"
@@ -150,7 +165,25 @@ getchemicalattr(::Glyceryl, ::Val{:name}; kwargs...) = "Glyceryl"
 getchemicalattr(::Glyceryl{RChirality}, ::Val{:name}; kwargs...) = "(R)-Glyceryl"
 getchemicalattr(::Glyceryl{SChirality}, ::Val{:name}; kwargs...) = "(S)-Glyceryl"
 getchemicalattr(x::T, ::Val{:name}; kwargs...) where {T <: FunctionalGroup{<: Metabolite}} = string(T, " Group")
-getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: Metabolite}} = vcat(chemicalelements(parentchemical(x)), leavinggroupelements(leavinggroup(x)))
+function getchemicalattr(x::T, ::Val{:elements}; kwargs...) where {T <: FunctionalGroup{<: Metabolite}}
+    es = chemicalelements(parentchemical(x))
+	ls = leavinggroupelements(leavinggroup(x))
+	for (e, n) in ls 
+		if n > 0
+			i = findfirst(x -> ==(first(x), e), es)
+			es[i] = e => (last(es[i]) + n)
+		else 
+			while n < 0 
+				i = findfirst(x -> ==(first(x), e), es)
+				es[i] = e => (last(es[i]) - 1)
+				n += 1
+				filter!(x -> last(x) > 0, es)
+			end
+		end
+	end
+	es
+end 
+getchemicalattr(x::T, ::Val{:formula}; unique = false, kwargs...) where {T <: FunctionalGroup{<: Metabolite}} = chemicalformula(chemicalelements(x); unique, kwargs...)
 
 getchemicalattr(::Tauryl, ::Val{:SMILES}; kwargs...) = "(NCCS(=O)(=O)O)"
 getchemicalattr(::Glycolyl, ::Val{:SMILES}; kwargs...) = "(C(=O)CO)"

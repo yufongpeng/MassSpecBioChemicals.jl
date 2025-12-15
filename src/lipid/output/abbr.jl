@@ -42,6 +42,8 @@ chiral_class_abbr(x::Union{Phosphatidicacid, Phosphatidylcholine, Phosphatidylet
     string(repr_class_rs(x), class_abbr(x))
 chiral_class_abbr(c::Monoradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(repr_class_rs(c), "LGP"))
 chiral_class_abbr(c::Diradylglycerophosphate) = replace(head_abbr(c.backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(repr_class_rs(c), "GP"))
+chiral_class_abbr(c::Radyldiglycerol) = head_abbr(c.backbone)
+chiral_class_abbr(c::Radyltriglycerol) = head_abbr(c.backbone)
 
 """
     class_abbr(lipid)
@@ -188,7 +190,7 @@ class_abbr(::Sulfonolipid) = "SL"
 
 class_abbr(::SphingoidBase) = "SPB"
 class_abbr(c::SphingoidBaseBone) = string(head_abbr(c.headgroup), "-SPB")
-class_abbr(c::Glycosylsphingoidbase{<: AbstractGlycan}) = string("Lyso", head_abbr(c.headgroup))
+class_abbr(c::Glycosylsphingoidbase{<: AbstractGlycan}) = string("Lyso-", head_abbr(c.headgroup))
 class_abbr(c::Glycosylsphingoidbase{<: Lac}) = string(head_abbr(c.headgroup), "SPB")
 class_abbr(c::Glycosylsphingoidbase{<: Glycan}) = string(head_abbr(c.headgroup), "-SPB")
 class_abbr(c::Glycosylsphingoidbase{<: GlyComp}) = string(head_abbr(c.headgroup), "SPB")

@@ -21,7 +21,9 @@ const PROTEIN_3LETTER_AA = Dict{String, Type}(
     "Val"   => Valine,
     "Sec"   => Selenocysteine,
     "Pyl"   => Pyrrolysine,
-    "Orn"   => Ornithine    
+    "Orn"   => Ornithine,
+    "5HTP"  => fiveHydroxytryptophan,
+    "DOPA"  => DOPA
 )
 const PROTEIN_3LETTER_FG = Dict{String, Type}(
     "Ala"   => Alanyl,
@@ -72,7 +74,9 @@ const PROTEIN_1LETTER_3LETTER = Dict{String, String}(
     "V"   => "Val",
     "U"   => "Sec",
     "O"   => "Pyl",
-    "Orn" => "Orn"
+    "Orn" => "Orn",
+    "5HTP"  => "5HTP",
+    "DOPA"  => "DOPA"
 )
 
 letter1_abbr(::Alanine) = "A"
@@ -98,6 +102,8 @@ letter1_abbr(::Valine) = "V"
 letter1_abbr(::Selenocysteine) = "U"
 letter1_abbr(::Pyrrolysine) = "O"
 letter1_abbr(::Ornithine) = "Orn"
+letter1_abbr(::fiveHydroxytryptophan) = "5HTP"
+letter1_abbr(::DOPA) = "DOPA"
 
 # isotope?
 function parse_aa(s::AbstractString)

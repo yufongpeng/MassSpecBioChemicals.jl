@@ -43,11 +43,17 @@ Leaving group of losing one amine group.
 """
 struct Deamine <: LeavingGroup end # Dehydrogen/Odehydrogen/Ndehydrogen
 """
-    Demethyl <: LeavingGroup
+    Demethine <: LeavingGroup
 
-Leaving group of losing one methyl group.
+Leaving group of losing one methylene group.
 """
-struct Demethyl <: LeavingGroup end # Dehydrogen/Odehydrogen/Ndehydrogen
+struct Demethine <: LeavingGroup end # Tridehydrogen
+"""
+    Tridehydrogen <: LeavingGroup
+
+Leaving group of losing three hydrogen atoms. 
+"""
+struct Tridehydrogen <: LeavingGroup end # Demethine
 
 """
     AbstractLinkageposition
@@ -147,3 +153,4 @@ struct XLinkedFunctionalGroup{M, L} <: AbstractFunctionalGroup
     functionalgroup::L
 end
 # isdissociated check adjacent C=O
+struct NullSubstituent <: FunctionalGroup{Nothing, Nothing} end 

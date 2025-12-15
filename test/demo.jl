@@ -30,7 +30,7 @@ s = "FAM 19:2(3Z,16Z);19CONH2;9OH[R],10OH[R],11OH[R]"
 s = "FAL 18:0;9oxo,10oxo,18oxo"
 s = "L-NASer 19:2(3Z,16Z);19oxo;19COSer;9OH[R],10OH[R],11OH[R]" # Full
 s = "L-NASer 19:2(3Z,16Z);19oxo;19CO(L-Ser);9OH[R],10OH[R],11OH[R]"
-s = "L-NASer 19:2(3Z,16Z);19oxo;19CO(L-Ser-L-Ala);9OH[R],10OH[R],11OH[R]"
+s = "L-NASer 19:2(3Z,16Z);19CO(L-Ser-L-Ala);9OH[R],10OH[R],11OH[R]"
 
 s = "FAM 19:2(3Z,15Z);18oxo;18NH2;10OH" # X
 
@@ -119,4 +119,24 @@ end
 for (k, v) in test_lipid[Sphingolipid]
     print(k, " -- ")
     println(chemicalsmiles(v.object; onlycarbonchain = true))
+end
+
+for (k, v) in test_lipid[FattyAcyl]
+    print(k, " -- ")
+    println(MBL.dissociate_carbonchain_group(v.object))
+end
+
+for (k, v) in test_lipid[Glycerolipid]
+    print(k, " -- ")
+    println(MBL.dissociate_carbonchain_group(v.object))
+end
+
+for (k, v) in test_lipid[Glycerophospholipid]
+    print(k, " -- ")
+    println(MBL.dissociate_carbonchain_group(v.object))
+end
+
+for (k, v) in test_lipid[Sphingolipid]
+    print(k, " -- ")
+    println(MBL.dissociate_carbonchain_group(v.object))
 end

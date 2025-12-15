@@ -535,7 +535,7 @@ function class_struct_Cer(head, pre, cls, post, pos, sil)
     head = try
         parse_headgroup(head)
     catch
-        parse_glycomp(head)
+        parse_glycomp2(head)
     end
     if head isa Tuple
         (MixedSphingoBone, 
@@ -557,7 +557,7 @@ function class_struct_SPB(head, pre, cls, post, pos, sil)
     head = try
         parse_headgroup(head)
     catch
-        parse_glycomp(head)
+        parse_glycomp2(head)
     end
     if head isa Tuple
         (MixedSphingoBone, 
@@ -663,7 +663,7 @@ function class_struct_GSL(head, pre, cls, post, pos, sil)
 end
 function class_struct_LGSL(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `SPB` instead"))
-    (SphingoBone, makechemical(parse_gsl_isomer(cls, post); sil), (SPB, ))
+    (SphingoBone, makechemical(parse_gsl_isomer(replace(cls, r"^Lyso-" => ""), post); sil), (SPB, ))
 end
 function class_struct_GlcCer(head, pre, cls, post, pos, sil) 
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `$cls` is not suppoted, please use `Cer` instead"))
