@@ -55,63 +55,73 @@ Kdn(; LFP = PyranoseForm, DL = NoDLForm) = Kdn{DL, LFP, Nothing}(nothing)
 # 9dKdn5,7N: Pse, Leg, Aci, 4eLeg, 8eLeg, 8eAci
 
 """
-   LegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   DiaminodideoxynonulosonicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
+
+Diamino-dideoxy-nonulosonicAcid.
+"""
+struct DiaminodideoxynonulosonicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
+    substituent::T
+end
+DiaminodideoxynonulosonicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = DiaminodideoxynonulosonicAcid{DL, LFP, T}(s)
+DiaminodideoxynonulosonicAcid(; LFP = PyranoseForm, DL = NoDLForm) = DiaminodideoxynonulosonicAcid{DL, LFP, Nothing}(nothing)
+"""
+   LegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 Legionaminic acid.
 """
-struct LegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct LegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 LegionaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = LegionaminicAcid{DL, LFP, T}(s)
 LegionaminicAcid(; LFP = PyranoseForm, DL = NoDLForm) = LegionaminicAcid{DL, LFP, Nothing}(nothing)
 # Leg = 9dKdn5,7N
 """
-   FourepilegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   FourepilegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 4-epi-legionaminic acid.
 """
-struct FourepilegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct FourepilegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 FourepilegionaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = FourepilegionaminicAcid{DL, LFP, T}(s)
 FourepilegionaminicAcid(; LFP = PyranoseForm, DL = NoDLForm) = FourepilegionaminicAcid{DL, LFP, Nothing}(nothing)
 """
-   EightepilegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   EightepilegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 8-epi-legionaminic acid.
 """
-struct EightepilegionaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct EightepilegionaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 EightepilegionaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = EightepilegionaminicAcid{DL, LFP, T}(s)
 EightepilegionaminicAcid(; LFP = PyranoseForm, DL = NoDLForm) = EightepilegionaminicAcid{DL, LFP, Nothing}(nothing)
 """
-   AcinetaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   AcinetaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 Acinetaminic acid.
 """
-struct AcinetaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct AcinetaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 AcinetaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = AcinetaminicAcid{DL, LFP, T}(s)
 AcinetaminicAcid(; LFP = PyranoseForm, DL = NoDLForm) = AcinetaminicAcid{DL, LFP, Nothing}(nothing)
 # Aci = 9d,7,8eKdn5,7N
 """
-   EightepiacinetaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   EightepiacinetaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 8-epei-acinetaminic acid.
 """
-struct EightepiacinetaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct EightepiacinetaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 EightepiacinetaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = EightepiacinetaminicAcid{DL, LFP, T}(s)
 EightepiacinetaminicAcid(; LFP = PyranoseForm, DL = NoDLForm) = EightepiacinetaminicAcid{DL, LFP, Nothing}(nothing)
 """
-   PseudaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+   PseudaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
 
 Pseudaminic acid.
 """
-struct PseudaminicAcid{D, P, T} <: DiaminodideoxynonulosonicAcid{D, P, T}
+struct PseudaminicAcid{D, P, T} <: AbstractdiaminodideoxynonulosonicAcid{D, P, T}
     substituent::T
 end
 PseudaminicAcid(s::T; LFP = PyranoseForm, DL = NoDLForm) where T = PseudaminicAcid{DL, LFP, T}(s)

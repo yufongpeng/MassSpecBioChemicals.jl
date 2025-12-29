@@ -9,7 +9,7 @@ using ..MassSpecBioChemicals.Proteins: parse_aa_fg
 using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup, ntotallinkage, leavinggroupelements
 using IterTools
 import Base: show, length
-import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem, losswaterelements
+import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem, losswaterelements, deisomerize, decompose
 export Saccharide, Monosaccharide, 
         AbstractHexose, Hexose, Glucose, Mannose, Galactose, Gulose, Altose, Allose, Talose, Idose, Apiose, Fructose, Tagatose, Sorbose, Psicose, 
         AbstractHexosamine, Hexosamine, Glucosamine, Mannosamine, Galactosamine, Gulosamine, Altosamine, Allosamine, Talosamine, Idosamine, 
@@ -19,7 +19,7 @@ export Saccharide, Monosaccharide,
         AbstractDideoxyhexose, Dideoxyhexose, 
         AbstractHexuronicAcid, HexuronicAcid, GlucuronicAcid, MannuronicAcid, GalacturonicAcid, GuluronicAcid, AlturonicAcid, AlluronicAcid, TaluronicAcid, IduronicAcid, 
         NonulosonicAcid, SialicAcid, NeuraminicAcid, NacetylneuraminicAcid, NglycolylneuraminicAcid, Kdn,
-        DiaminodideoxynonulosonicAcid, LegionaminicAcid, FourepilegionaminicAcid, EightepilegionaminicAcid, AcinetaminicAcid, EightepiacinetaminicAcid, PseudaminicAcid, 
+        AbstractdiaminodideoxynonulosonicAcid, DiaminodideoxynonulosonicAcid, LegionaminicAcid, FourepilegionaminicAcid, EightepilegionaminicAcid, AcinetaminicAcid, EightepiacinetaminicAcid, PseudaminicAcid, 
 
         AbstractPentose, Pentose, Arabinose, Lyxose, Xylose, Ribose, AbstractDeoxypentose, Deoxypentose, Deoxyribose, 
         Inositol, 
@@ -185,7 +185,7 @@ abstract type AbstractDideoxyhexose{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type NonulosonicAcid{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type SialicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
 # abstract type DideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
-abstract type DiaminodideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
+abstract type AbstractdiaminodideoxynonulosonicAcid{D, P, T} <: NonulosonicAcid{D, P, T} end
 abstract type AbstractPentose{D, P, T} <: Monosaccharide{D, P, T} end
 abstract type AbstractDeoxypentose{D, P, T} <: Monosaccharide{D, P, T} end
 
@@ -506,19 +506,6 @@ function push_monosaccharide!(d, s::GlyComp)
         push_monosaccharide!(d, x, i)
     end
 end
-implicit_config(x) = false
-implicit_config(::Abequose) = true
-implicit_config(::Paratose) = true
-implicit_config(::Tyvelose) = true
-implicit_config(::Colitose) = true
-implicit_config(::SialicAcid) = true
-implicit_config(::DiaminodideoxynonulosonicAcid) = true
-implicit_config(::SimpleGlcseries) = true
-implicit_config(::Ganglioseries) = true
-implicit_config(::Globoseries) = true
-implicit_config(::Isogloboseries) = true
-implicit_config(::Lactoseries) = true
-implicit_config(::Neolactoseries) = true
 
 # D for Abe, Bac, Dha, Kdo, Mur, Par, Tyv; L for Col; DD for Kdn, Neu, Leg, 4eLeg; LL for Pse, Aci; LD for 8eLeg; DL for 8eAci
 include("glycan.jl")

@@ -3,7 +3,7 @@ using Reexport
 using ..MassSpecBioChemicals
 using ..MassSpecBioChemicals: lk, GlyceraldehydeSystem, RSSystem
 using MassSpecChemicals: AbstractChemical
-import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, dehydrogengroup, dehydroxygroup, chiralchemical, losswaterelements
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, dehydrogengroup, dehydroxygroup, dehydrogenfunctionalgroup, dehydroxyfunctionalgroup, chiralchemical, losswaterelements, deisomerize, decompose
 import MassSpecChemicals: getchemicalattr
 export AbstractPeptide,
         αAminoAcid, 

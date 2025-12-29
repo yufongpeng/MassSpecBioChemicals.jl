@@ -1,3 +1,4 @@
+# Use composition/dissociate_group
 function push_dissociate_fg!(d, fgs)
     for fg in tuplize(fgs)
         if ispropertyposition(fg) 
@@ -25,7 +26,7 @@ function dissociate_carbonchain_group(lipid::Union{Hydrocarbon, FattyAlcohol, Fa
         end
         fg = collect(pairs(d))
     end
-    MonoFattyAcyl(lipid.backbone, chain) => (nothing, fg)
+    MonoFattyAcyl(lipid.backbone, chain) => (nothing, sort_chainmodification!(fg))
 end
 function dissociate_carbonchain_group(lipid::FattyAcid; presserve_fg = true) 
     chain, fg = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -41,9 +42,9 @@ function dissociate_carbonchain_group(lipid::FattyAcid; presserve_fg = true)
         fg = collect(pairs(d))
     else
         i = findfirst(x -> ==(first(x), CarboxylicAcidGroup()), fg)
-        isnothing(i) ? pushfirst!(fg, CarboxylicAcidGroup() => 0x01) : (fg[i] = CarboxylicAcidGroup() => (last(fg[i] + 0x01)))
+        isnothing(i) ? pushfirst!(fg, CarboxylicAcidGroup() => 0x01) : (fg[i] = CarboxylicAcidGroup() => (last(fg[i]) + 0x01))
     end
-    MonoFattyAcyl(lipid.backbone, chain) => (CarboxylicAcidGroup(), fg)
+    MonoFattyAcyl(lipid.backbone, chain) => (CarboxylicAcidGroup(), sort_chainmodification!(fg))
 end
 function dissociate_carbonchain_group(lipid::FattyAmine; presserve_fg = true) 
     chain, fg = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -59,9 +60,9 @@ function dissociate_carbonchain_group(lipid::FattyAmine; presserve_fg = true)
         fg = collect(pairs(d))
     else
         i = findfirst(x -> ==(first(x), Amino()), fg)
-        isnothing(i) ? pushfirst!(fg, Amino() => 0x01) : (fg[i] = Amino() => (last(fg[i] + 0x01)))
+        isnothing(i) ? pushfirst!(fg, Amino() => 0x01) : (fg[i] = Amino() => (last(fg[i]) + 0x01))
     end
-    MonoFattyAcyl(lipid.backbone, chain) => (Amino(), fg)
+    MonoFattyAcyl(lipid.backbone, chain) => (Amino(), sort_chainmodification!(fg))
 end
 function dissociate_carbonchain_group(lipid::FattyAcylEstolid; presserve_fg = true) 
     # parallel
@@ -74,7 +75,7 @@ function dissociate_carbonchain_group(lipid::FattyAcylEstolid; presserve_fg = tr
     get!(d, CarboxylicAcidGroup(), 0x00)
     d[CarboxylicAcidGroup()] += 0x01
     fg = collect(pairs(d))
-    dl => (CarboxylicAcidGroup(), fg)
+    dl => (CarboxylicAcidGroup(), sort_chainmodification!(fg))
 end
 function dissociate_carbonchain_group(lipid::WaxEster; presserve_fg = true) 
     # linear 
@@ -85,7 +86,7 @@ function dissociate_carbonchain_group(lipid::WaxEster; presserve_fg = true)
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (fg1, fg2))
     fg = collect(pairs(d))
-    dl => (nothing, fg)
+    dl => (nothing, sort_chainmodification!(fg))
 end
 
 function dissociate_carbonchain_group(lipid::MonoFattyAcyl; presserve_fg = true) 
@@ -102,10 +103,11 @@ function dissociate_carbonchain_group(lipid::MonoFattyAcyl; presserve_fg = true)
         d[b] += 0x01
         fg = collect(pairs(d))
     else
+        get!(d, b, 0x00)
         i = findfirst(x -> ==(first(x), b), fg)
-        isnothing(i) ? pushfirst!(fg, b => 0x01) : (fg[i] = b => (last(fg[i] + 0x01)))
+        isnothing(i) ? pushfirst!(fg, b => 0x01) : (fg[i] = b => (last(fg[i]) + 0x01))
     end
-    MonoFattyAcyl(HydrogenOxide(), chain) => (b, fg)
+    MonoFattyAcyl(HydrogenOxide(), chain) => (b, sort_chainmodification!(fg))
 end
 function dissociate_carbonchain_group(lipid::NacylAmine; presserve_fg = true)
     if lipid.backbone isa FattyAcyl
@@ -120,7 +122,7 @@ function dissociate_carbonchain_group(lipid::NacylAmine; presserve_fg = true)
             end
             fg = collect(pairs(d))
         end
-        NacylAmine(lipid.backbone, chain) => (nothing, fg)
+        NacylAmine(lipid.backbone, chain) => (nothing, sort_chainmodification!(fg))
     else
         chain, fg = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
         presserve_fg || return MonoFattyAcyl(HydrogenOxide(), chain) => nothing
@@ -135,10 +137,11 @@ function dissociate_carbonchain_group(lipid::NacylAmine; presserve_fg = true)
             d[b] += 0x01
             fg = collect(pairs(d))
         else
+            get!(d, b, 0x00)
             i = findfirst(x -> ==(first(x), b), fg)
-            isnothing(i) ? pushfirst!(fg, b => 0x01) : (fg[i] = b => (last(fg[i] + 0x01)))
+            isnothing(i) ? pushfirst!(fg, b => 0x01) : (fg[i] = b => (last(fg[i]) + 0x01))
         end
-        MonoFattyAcyl(HydrogenOxide(), chain) => (b, fg)
+        MonoFattyAcyl(HydrogenOxide(), chain) => (b, sort_chainmodification!(fg))
     end
 end
 
@@ -154,7 +157,7 @@ function dissociate_carbonchain_group(lipid::Glycerolipid; presserve_fg = true)
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    dl => (nothing, collect(pairs(d)))
+    dl => (nothing, sort_chainmodification!(collect(pairs(d))))
 end
 
 dissociate_carbonchain_group(lipid::Union{<: Glycerophospholipid, <: Omodifiedradylglycerol}; presserve_fg = true) = _dissociate_carbonchain_group(lipid; presserve_fg)
@@ -173,10 +176,10 @@ function _dissociate_carbonchain_group(lipid::Union{<: Glycerophospholipid, <: O
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    b = deletechemicalat(lipid.backbone, length(lipid.backbone))
+    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); length(lipid.backbone) - 1)
     get!(d, b, 0x00)
     d[b] += 0x01
-    dl => (b, collect(pairs(d)))
+    dl => (b, sort_chainmodification!(collect(pairs(d))))
 end
 
 function dissociate_carbonchain_group(lipid::Union{LysophosphatidylNmodifiedethanolamine, LysophosphatidylNmodifiedserine}; presserve_fg = true)
@@ -194,10 +197,10 @@ function dissociate_carbonchain_group(lipid::Union{LysophosphatidylNmodifiedetha
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
-        b = deletechemicalat(lipid.backbone, [1, length(lipid.backbone)])
+        b = dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2)
         get!(d, b, 0x00)
         d[b] += 0x01
-        dl => (b, collect(pairs(d)))
+        dl => (b, sort_chainmodification!(collect(pairs(d))))
     else
         _dissociate_carbonchain_group(lipid; presserve_fg)
     end
@@ -218,10 +221,10 @@ function dissociate_carbonchain_group(lipid::Union{PhosphatidylNmodifiedethanola
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
-        b = deletechemicalat(lipid.backbone, [1, length(lipid.backbone)])
+        b = dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2)
         get!(d, b, 0x00)
         d[b] += 0x01
-        dl => (b, collect(pairs(d)))
+        dl => (b, sort_chainmodification!(collect(pairs(d))))
     else
         _dissociate_carbonchain_group(lipid)
     end
@@ -240,9 +243,10 @@ function dissociate_carbonchain_group(lipid::Union{Bisradylglycerophosphate, Rad
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    get!(d, lipid.backbone, 0x00)
-    d[lipid.backbone] += 0x01
-    dl => (lipid.backbone, collect(pairs(d)))
+    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1)
+    get!(d, b, 0x00)
+    d[b] += 0x01
+    dl => (lipid.backbone, sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::Bisradylglycerophosphoglycerol; presserve_fg = true)
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -250,9 +254,10 @@ function dissociate_carbonchain_group(lipid::Bisradylglycerophosphoglycerol; pre
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    get!(d, lipid.backbone, 0x00)
-    d[lipid.backbone] += 0x01
-    dl => (lipid.backbone, collect(pairs(d)))
+    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1)
+    get!(d, b, 0x00)
+    d[b] += 0x01
+    dl => (lipid.backbone, sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::GlycerophosphoNacylethanolamine; presserve_fg = true)
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -263,7 +268,7 @@ function dissociate_carbonchain_group(lipid::GlycerophosphoNacylethanolamine; pr
     b = deletechemicalat(lipid.backbone, length(lipid.backbone)) 
     get!(d, b, 0x00)
     d[b] += 0x01
-    dl => (b, collect(pairs(d)))
+    dl => (b, sort_chainmodification!(collect(pairs(d))))
 end
 
 function dissociate_carbonchain_group(lipid::CeramideBone; presserve_fg = true) 
@@ -272,7 +277,7 @@ function dissociate_carbonchain_group(lipid::CeramideBone; presserve_fg = true)
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    dl => (lipid.headgroup, collect(pairs(d)))
+    dl => (lipid.headgroup, sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::Sulfonolipid; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -282,7 +287,7 @@ function dissociate_carbonchain_group(lipid::Sulfonolipid; presserve_fg = true)
     push_dissociate_fg!(d, fgs)
     get!(d, Sulfo(), 0x00)
     d[Sulfo()] += 0x01
-    dl => (Sulfo(), collect(pairs(d)))
+    dl => (Sulfo(), sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::SphingoBone; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -292,7 +297,7 @@ function dissociate_carbonchain_group(lipid::SphingoBone; presserve_fg = true)
     push_dissociate_fg!(d, fgs)
     get!(d, Amino(), 0x00)
     d[Amino()] += 0x01
-    dl => ((lipid.headgroup, Amino()), collect(pairs(d)))
+    dl => ((lipid.headgroup, Amino()), sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::Lysosulfonolipid; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -304,7 +309,7 @@ function dissociate_carbonchain_group(lipid::Lysosulfonolipid; presserve_fg = tr
     d[Sulfo()] += 0x01
     get!(d, Amino(), 0x00)
     d[Amino()] += 0x01
-    dl => ((Sulfo(), Amino()), collect(pairs(d)))
+    dl => ((Sulfo(), Amino()), sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::Acylceramide; presserve_fg = true) 
     chain1, fg1 = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -313,7 +318,7 @@ function dissociate_carbonchain_group(lipid::Acylceramide; presserve_fg = true)
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (tuplize(fg1)..., fg2))
-    dl => (nothing, collect(pairs(d)))
+    dl => (nothing, sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::Acylsphingomyelin; presserve_fg = true) 
     chain1, fg1 = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -322,7 +327,7 @@ function dissociate_carbonchain_group(lipid::Acylsphingomyelin; presserve_fg = t
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (tuplize(fg1)..., fg2))
-    dl => (last(lipid.headgroup), collect(pairs(d)))
+    dl => (last(lipid.headgroup), sort_chainmodification!(collect(pairs(d))))
 end
 function dissociate_carbonchain_group(lipid::MixSphingoBone; presserve_fg = true) 
     chain1, fg1 = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
@@ -336,7 +341,7 @@ function dissociate_carbonchain_group(lipid::MixSphingoBone; presserve_fg = true
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (tuplize(fg1)..., tuplize(fgs)...))
-    dl => (filter(x -> !isa(x, MonoFattyAcyl), lipid.headgroup), collect(pairs(d)))
+    dl => (filter(x -> !isa(x, MonoFattyAcyl), lipid.headgroup), sort_chainmodification!(collect(pairs(d))))
 end
 
 dissociate_carbonchain(lipid) = first(dissociate_carbonchain_group(lipid; presserve_fg = false))
@@ -358,9 +363,10 @@ function dissociate_carbonchain_xlinkage(sub::Vector{<: Pair{<: AbstractFunction
         if first(v) isa XLinkedFunctionalGroup && !(first(v).functionalgroup isa Substituent{<: MonoFattyAcyl})
             f = transform_xlinkge(first(v))
             s[i] = f => last(v)
-            g = parentchemical(first(v))
-            isnothing(g) && continue
-            presserve_fg && push!(fg, g => last(v))
+            # g = parentchemical(first(v))
+            # isnothing(g) && continue
+            # presserve_fg && push!(fg, g => last(v))
+            presserve_fg && push!(fg, v)
         elseif first(v) isa XLinkedFunctionalGroup
             c, f = dissociate_carbonchain_xlinkage(first(v).functionalgroup.chemical.chain)
             s[i] = XLinkedFunctionalGroup(first(v).xlinkage, Substituent(leavinggroup(first(v).functionalgroup), MonoFattyAcyl(first(v).functionalgroup.chemical.backbone, c), first(v).functionalgroup.position)) => last(v)
@@ -378,9 +384,10 @@ function dissociate_carbonchain_xlinkage(sub::Vector{<: Pair{UInt8, <: AbstractF
         if last(v) isa XLinkedFunctionalGroup && !(last(v).functionalgroup isa Substituent{<: MonoFattyAcyl})
             f = transform_xlinkge(last(v))
             s[i] = first(v) => f 
-            g = parentchemical(last(v))
-            isnothing(g) && continue
-            presserve_fg && push!(fg, first(v) => g)
+            # g = parentchemical(last(v))
+            # isnothing(g) && continue
+            # presserve_fg && push!(fg, first(v) => g)
+            presserve_fg && push!(fg, v)
         elseif last(v) isa XLinkedFunctionalGroup
             c, f = dissociate_carbonchain_xlinkage(last(v).functionalgroup.chemical.chain)
             s[i] = first(v) => XLinkedFunctionalGroup(last(v).xlinkage, Substituent(leavinggroup(last(v).functionalgroup), MonoFattyAcyl(last(v).functionalgroup.chemical.backbone, c), last(v).functionalgroup.position))

@@ -72,3 +72,80 @@ getchemicalattr(aa::αAminoAcid, ::Val{:formula}; unique = false, kwargs...) = c
 getchemicalattr(aa::FunctionalGroup{<: αAminoAcid, Dehydroxy}, ::Val{:elements}; kwargs...) = chemicalelements(parentchemical(aa))[begin:end - 2]
 getchemicalattr(aa::FunctionalGroup{<: αAminoAcid, Dehydroxy}, ::Val{:formula}; unique = false, kwargs...) = chemicalformula(chemicalelements(aa); unique, kwargs...)
 
+deisomerize(pep::Peptide) = Peptide(map(deisomerize, getchaincomponent(pep)))
+deisomerize(::Glycine) = Glycine{NoDLForm}()
+deisomerize(::Alanine) = Alanine{DLForm}()
+deisomerize(::Arginine) = Arginine{DLForm}()
+deisomerize(::Aspargine) = Aspargine{DLForm}()
+deisomerize(::Aspartate) = Aspartate{DLForm}()
+deisomerize(::Cysteine) = Cysteine{DLForm}()
+deisomerize(::Glutamine) = Glutamine{DLForm}()
+deisomerize(::Glutamate) = Glutamate{DLForm}()
+deisomerize(::Histidine) = Histine{DLForm}()
+deisomerize(::Isoleucine) = Isoleucine{DLForm}()
+deisomerize(::Leucine) = Leucine{DLForm}()
+deisomerize(::Lysine) = Lysine{DLForm}()
+deisomerize(::Methionine) = Methionine{DLForm}()
+deisomerize(::Phenylalanine) = Phenylalanine{DLForm}()
+deisomerize(::Proline) = Proline{DLForm}()
+deisomerize(::Serine) = Serine{DLForm}()
+deisomerize(::Threonine) = Threonine{DLForm}()
+deisomerize(::Tryptophan) = Tryptophan{DLForm}()
+deisomerize(::Tyrosine) = Tyrosine{DLForm}()
+deisomerize(::Valine) = Valine{DLForm}()
+deisomerize(::Selenocysteine) = Selenocysteine{DLForm}()
+deisomerize(::Pyrrolysine) = Pyrrolysine{DLForm}()
+deisomerize(::Ornithine) = Ornithine{DLForm}() 
+deisomerize(::fiveHydroxytryptophan) = fiveHydroxytryptophan{DLForm}()
+deisomerize(::DOPA) = DOPA{DLForm}()
+
+composition(pep::Peptide) = Dict(getchaincomponent(pep))
+composition(aa::αAminoAcid) = Dict(aa => 0x01)
+
+function decompose(pep::Peptide) 
+    p = map(decompose, getchaincomponent(pep))
+    d = Dict{AbstractChemical, UInt8}(CarboxylicAcidGroup() => 0x01)
+    for c in p 
+        for (k, v) in c 
+            get!(d, k, 0x00)
+            d[k] += v 
+        end
+        d[Amino()] -= 0x01
+        d[CarboxylicAcidGroup()] -= 0x01
+        d[Amide()] += 0x01 
+    end
+    d[Amide()] -= 0x01
+    d
+end
+
+decompose(::Glycine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Alanine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Arginine) = Dict(MethylAmino() => 0x01, Amino() => 0x03, CarboxylicAcidGroup() => 0x01)
+decompose(::Aspargine) = Dict(Amide() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Aspartate) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x02)
+decompose(::Cysteine) = Dict(Sulfanyl() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Glutamine) = Dict(Amide() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Glutamate) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x02)
+decompose(::Histidine) = Dict(DimethylAmino() => 0x01, MethylAmino() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Isoleucine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Leucine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Lysine) = Dict(Amino() => 0x02, CarboxylicAcidGroup() => 0x01)
+decompose(::Methionine) = Dict(Methanethiol() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Phenylalanine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Proline) = Dict(MethylAmino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Serine) = Dict(Hydroxy() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Threonine) = Dict(Hydroxy() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Tryptophan) = Dict(MethylAmino() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Tyrosine) = Dict(Phenolhydroxy() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Valine) = Dict(Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Selenocysteine) = Dict(Sulfanyl() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Pyrrolysine) = Dict(DimethylAmino() => 0x01, Amide() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Ornithine) = Dict(Amino() => 0x02, CarboxylicAcidGroup() => 0x01)
+decompose(::fiveHydroxytryptophan) = Dict(Hydroxy() => 0x01, MethylAmino() => 0x01, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::DOPA) = Dict(Phenolhydroxy() => 0x02, Amino() => 0x01, CarboxylicAcidGroup() => 0x01)
+
+dehydrogenfunctionalgroup(pep::Peptide; position = nothing) = dehydrogenfunctionalgroup(first(getchaincomponent(pep)))
+dehydrogenfunctionalgroup(::αAminoAcid; position = nothing) = Amino()
+dehydrogenfunctionalgroup(::Proline; position = nothing) = MethylAmino()
+dehydroxyfunctionalgroup(::Peptide; position = nothing) = CarboxylicAcidGroup()
+dehydroxyfunctionalgroup(::αAminoAcid; position = nothing) = CarboxylicAcidGroup()

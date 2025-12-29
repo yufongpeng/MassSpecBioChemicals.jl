@@ -2,7 +2,7 @@ module Metabolites
 using ..MassSpecBioChemicals
 using MassSpecChemicals: AbstractChemical
 using ..MassSpecBioChemicals: GlyceraldehydeSystem
-import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, dehydroxyposition, dehydrogenposition, leavinggroupelements, dehydrogengroup, dehydroxygroup, chiralchemical
+import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, dehydroxyposition, dehydrogenposition, leavinggroupelements, dehydrogengroup, dehydroxygroup, dehydrogenfunctionalgroup, dehydroxyfunctionalgroup, chiralchemical, deisomerize, decompose
 import MassSpecChemicals: getchemicalattr
 export Metabolite, 
        Ethanolamine, 
@@ -193,27 +193,65 @@ getchemicalattr(::Glyceryl, ::Val{:SMILES}; kwargs...) = "(OCC(O)C(O))"
 
 dehydrogenposition(::Ethanolamine) = nothing
 dehydroxyposition(::Ethanolamine) = nothing
+dehydrogenfunctionalgroup(::Ethanolamine; position = nothing) = Amino()
+dehydroxyfunctionalgroup(::Ethanolamine; position = nothing) = Hydroxy()
 dehydrogenposition(::Nmethylethanolamine) = nothing
 dehydroxyposition(::Nmethylethanolamine) = nothing
+dehydrogenfunctionalgroup(::Nmethylethanolamine; position = nothing) = MethylAmino()
+dehydroxyfunctionalgroup(::Nmethylethanolamine; position = nothing) = Hydroxy()
 dehydrogenposition(::NNdimethylethanolamine) = missing
 dehydroxyposition(::NNdimethylethanolamine) = nothing
+dehydroxyfunctionalgroup(::NNdimethylethanolamine; position = nothing) = Hydroxy()
 dehydrogenposition(::GABA) = nothing
 dehydroxyposition(::GABA) = nothing
+dehydrogenfunctionalgroup(::GABA; position = nothing) = Amino()
+dehydroxyfunctionalgroup(::GABA; position = nothing) = CarboxylicAcidGroup()
 dehydrogenposition(::Dopamine) = nothing
 dehydroxyposition(::Dopamine) = missing
+dehydrogenfunctionalgroup(::Dopamine; position = nothing) = Amino()
 dehydrogenposition(::Taurine) = nothing
+dehydrogenfunctionalgroup(::Taurine; position = nothing) = Sulfo()
 dehydroxyposition(::Taurine) = missing
 dehydrogenposition(::Choline) = missing
 dehydroxyposition(::Choline) = nothing
+dehydroxyfunctionalgroup(::Choline; position = nothing) = Hydroxy()
 dehydrogenposition(::CoA) = nothing
 dehydroxyposition(::CoA) = missing
+dehydrogenfunctionalgroup(::CoA; position = nothing) = Sulfo()
 dehydrogenposition(::GlycolicAcid) = nothing
 dehydroxyposition(::GlycolicAcid) = nothing
+dehydrogenfunctionalgroup(::GlycolicAcid; position = nothing) = Hydroxy()
+dehydroxyfunctionalgroup(::GlycolicAcid; position = nothing) = CarboxylicAcidGroup()
 dehydrogenposition(::LacticAcid) = nothing
 dehydroxyposition(::LacticAcid) = nothing
+dehydrogenfunctionalgroup(::LacticAcid; position = nothing) = Hydroxy()
+dehydroxyfunctionalgroup(::LacticAcid; position = nothing) = CarboxylicAcidGroup()
 dehydrogenposition(::PyruvicAcid) = missing
 dehydroxyposition(::PyruvicAcid) = nothing
+dehydroxyfunctionalgroup(::PyruvicAcid; position = nothing) = CarboxylicAcidGroup()
 dehydrogenposition(::Glycerol) = 0x01
 dehydroxyposition(::Glycerol) = 0x03
+dehydrogenfunctionalgroup(::LacticAcid; position = nothing) = Hydroxy()
+dehydroxyfunctionalgroup(::LacticAcid; position = nothing) = Hydroxy()
+
+deisomerize(::Carnitine) = Carnitine{DLForm}()
+deisomerize(::LacticAcid) = LacticAcid{DLForm}()
+deisomerize(::Glycerol) = Glycerol{RSChirality}()
+
+decompose(::Ethanolamine) = Dict(Hydroxy() => 0x01, Amino() => 0x01)
+decompose(::Nmethylethanolamine) = Dict(Hydroxy() => 0x01, MethylAmino() => 0x01) # N-alky
+decompose(::NNdimethylethanolamine) = Dict(Hydroxy() => 0x01, DimethylAmino() => 0x01)
+decompose(::GABA) = Dict(CarboxylicAcidGroup() => 0x01, Amino() => 0x01)
+decompose(::Dopamine) = Dict(Phenolhydroxy() => 0x02, Amino() => 0x01)
+decompose(::Taurine) = Dict(Sulfo() => 0x01, Amino() => 0x01)
+decompose(::Carnitine) = Dict(TrimethylAmino() => 0x01, Hydroxy() => 0x01, CarboxylicAcidGroup() => 0x01)
+decompose(::Choline) = Dict(TrimethylAmino() => 0x01, Hydroxy() => 0x01)
+decompose(::CoA) = Dict(CoA() => 0x01)
+decompose(::GlycolicAcid) = Dict(CarboxylicAcidGroup() => 0x01, Hydroxy() => 0x01)
+decompose(::LacticAcid) = Dict(CarboxylicAcidGroup() => 0x01, Hydroxy() => 0x01)
+decompose(::PyruvicAcid) = Dict(CarboxylicAcidGroup() => 0x01, Oxo() => 0x01)
+decompose(::Glycerol) = Dict(Hydroxy() => 0x03)
+decompose(::Serotonin) = Dict(Phenolhydroxy() => 0x01, Amino() => 0x01, MethylAmino() => 0x01)
+decompose(::Melatonin) = Dict(Methoxy() => 0x01, Nacetyl() => 0x01, MethylAmino() => 0x01)
 
 end

@@ -6,7 +6,7 @@ using MassSpecChemicals: AbstractChemical, tuplize, vectorize
 import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, repr_linkage, dehydroxyposition, dehydrogenposition, AbstractConfiguration
 import MassSpecChemicals: parse_chemical, getchemicalattr
 import Base: isless, getindex, length, size, eltype, getproperty, propertynames, setproperty!, keys, values, pairs
-using ..MassSpecBioChemicals: lk, makechemical, makelinkage, concatchemical, deletechemicalat, AbstractFunctionalGroup, UnknownGroup, dehydrogenposition, dehydroxyposition, RSSystem, GeometricConfiguration, dehydroxygroup, dehydrogengroup, chiralchemical, isdissociated, nlinkage, ntotallinkage
+using ..MassSpecBioChemicals: lk, makechemical, makelinkage, concatchemical, deletechemicalat, AbstractFunctionalGroup, UnknownGroup, dehydrogenposition, dehydroxyposition, RSSystem, GeometricConfiguration, dehydroxygroup, dehydrogengroup, chiralchemical, isdissociated, nlinkage, ntotallinkage, deisomerize, composition
 using ..MassSpecBioChemicals.Glycans: ap, α, β, parse_monosaccharide, parse_glycomp, parse_series_glycan, MONO_STRUCT, GLYCAN_STRUCT, generic_glycan
 using ..MassSpecBioChemicals.Proteins: parse_aa, parse_aa_fg, parse_aa3, letter3_abbr, PROTEIN_3LETTER_AA
 export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, SPB, AbstractSTRing, STRing, SRing, DSMSRing, DCRing, CASRing, BRSRing, EGSRing, DEGSRing, SISRing, STSRing,

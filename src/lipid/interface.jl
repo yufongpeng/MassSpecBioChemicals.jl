@@ -330,3 +330,21 @@ function Base.iterate(dbo::LipidDataBaseObject, state = 1)
     p = propertynames(dbo)
     state > length(p) ? nothing : (getproperty(dbo, p[state]), state + 1)
 end
+
+deisomerize(lipid::MonoFattyAcyl) = MonoFattyAcyl(deisomerize(lipid.backbone), deisomerize(lipid.chain))
+deisomerize(lipid::NacylAmine) = NacylAmine(deisomerize(lipid.backbone), deisomerize(lipid.chain))
+deisomerize(lipid::FattyAcylEster) = FattyAcylEster(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00)
+deisomerize(lipid::Monoradylglycerol) = Monoradylglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, RSChirality())
+deisomerize(lipid::Diradylglycerol) = Diradylglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, RSChirality())
+deisomerize(lipid::Triradylglycerol) = Triradylglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, RSChirality())
+deisomerize(lipid::Radyldiglycerol) = Radyldiglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x0000, (RSChirality(), RSChirality()))
+deisomerize(lipid::Radyltriglycerol) = Radyltriglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x0000, (RSChirality(), RSChirality(), RSChirality()))
+deisomerize(lipid::Radylglycerophosphate) = Radylglycerophosphate(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, RSChirality())
+deisomerize(lipid::Radylglycerophosphoaminoacid) = Radylglycerophosphoaminoacid(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, (RSChirality(), RSChirality()))
+deisomerize(lipid::Radylglycerophosphoglycerol) = Radylglycerophosphoglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x00, (RSChirality(), RSChirality()))
+deisomerize(lipid::Bisradylglycerophosphate) = Bisradylglycerophosphate(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x0000, (RSChirality(), RSChirality()))
+deisomerize(lipid::Bisradylglycerophosphoglycerol) = Bisradylglycerophosphoglycerol(deisomerize(lipid.backbone), deisomerize(lipid.chain), 0x0000, (RSChirality(), RSChirality(), RSChirality()))
+deisomerize(lipid::SphingoBone) = SphingoBone(deisomerize(lipid.headgroup), deisomerize(lipid.chain), 0x00, lipid.chirality isa RSSystem ? RSChirality() : map(x -> RSChirality(), lipid.chirality))
+deisomerize(lipid::MixSphingoBone) = MixSphingoBone(deisomerize(lipid.headgroup), deisomerize(lipid.chain), map(x -> 0x00, lipid.position), lipid.chirality isa Vector{<: RSSystem} ? map(x -> RSChirality(), lipid.chirality) : map(x -> map(y -> RSChirality(), x), lipid.chirality))
+
+# composition

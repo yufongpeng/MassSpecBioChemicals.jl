@@ -326,10 +326,157 @@ end
 function transformlinkage(::Type{ChainedChemical}, m::Glycan)
     Tuple((first(ls), Dehydroxy()) => (last(ls), Dehydrogen()) for ls in getchainlinkage(m))
 end
-
+# dissociate_group
 getchaincomponent(sugar::SeriesGlycan) = getchaincomponent(generic_glycan(sugar))
 composition(sugar::AbstractGlycan) = Dict(getchaincomponent(GlyComp(sugar))...)
 composition(sugar::GlyComp) = Dict(getchaincomponent(sugar)...)
+composition(mono::Monosaccharide) = Dict(mono => 0x01)
 length(sugar::AbstractGlycan) = sum(length, getchaincomponent(sugar))
 length(sugar::GlyComp) = length(getchaincomponent(sugar))
 # concatchemical, makechemical for Glycomp
+function deisomerize(sugar::AbstractGlycan) 
+    comp = composition(sugar)
+    d = Dict{Monosaccharide, UInt8}()
+    for (k, v) in comp 
+        kn = deisomerize(k)
+        get!(d, kn, 0x00)
+        d[kn] += v 
+    end
+    GlyComp(collect(pairs(d)))
+end
+deisomerize(sugar::AbstractHexose{D, P, T}) where {D, P, T} = Hexose{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractPentose{D, P, T}) where {D, P, T} = Pentose{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractDeoxypentose{D, P, T}) where {D, P, T} = Deoxypentose{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractHexuronicAcid{D, P, T}) where {D, P, T} = HexuronicAcid{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractHexosamine{D, P, T}) where {D, P, T} = Hexosamine{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractNacetylhexosamine{D, P, T}) where {D, P, T} = Nacetylhexosamine{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractDeoxyhexose{D, P, T}) where {D, P, T} = Deoxyhexose{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractDideoxyhexose{D, P, T}) where {D, P, T} = Dideoxyhexose{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::AbstractNacetyldeoxyhexosamine{D, P, T}) where {D, P, T} = Nacetyldeoxyhexosamine{DLForm, P, T}(sugar.substituent)
+deisomerize(sugar::SialicAcid{D, P, T}) where {D, P, T} = sugar 
+deisomerize(sugar::AbstractdiaminodideoxynonulosonicAcid{D, P, T}) where {D, P, T} = DiaminodideoxynonulosonicAcid{D, P, T}(sugar.substituent)
+function decompose(sugar::AbstractHexose)
+    d = Dict(Hydroxy() => 0x05, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractPentose)
+    d = Dict(Hydroxy() => 0x04, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractDeoxypentose)
+    d = Dict(Hydroxy() => 0x03, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractHexuronicAcid)
+    d = Dict(Hydroxy() => 0x04, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractHexosamine)
+    d = Dict(Hydroxy() => 0x04, Amine() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractNacetylhexosamine)
+    d = Dict(Hydroxy() => 0x04, Nacetyl() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractDeoxyhexose)
+    d = Dict(Hydroxy() => 0x04, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractDideoxyhexose)
+    d = Dict(Hydroxy() => 0x04, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractNacetyldeoxyhexosamine)
+    d = Dict(Hydroxy() => 0x03, Nacetyl() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::NeuraminicAcid)
+    d = Dict(Hydroxy() => 0x05, Amine() => 0x01, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::NacetylneuraminicAcid)
+    d = Dict(Hydroxy() => 0x05, Nacetyl() => 0x01, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::NglycolylneuraminicAcid)
+    d = Dict(Hydroxy() => 0x05, XLinkedFunctionalGroup(Nlinkage(), Glycolyl()) => 0x01, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::Kdn)
+    d = Dict(Hydroxy() => 0x06, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+function decompose(sugar::AbstractdiaminodideoxynonulosonicAcid)
+    d = Dict(Hydroxy() => 0x03, Amine() => 0x02, CarboxylicAcidGroup() => 0x01, Ether() => 0x01)
+    _decompose!(d, sugar)
+end
+
+function _decompose!(d, sugar)
+    (isnothing(sugar.substituent) || isempty(sugar.substituent)) && return d 
+    if first(sugar.substituent) isa Pair{UInt8}
+        for (p, k) in sugar.substituent
+            fg, lk = snfg_linkage(sugar, p)
+            sub = decompose(snfg_add_linkage(k, lk))
+            d[fg] -= 0x01
+            for (kn, vn) in sub
+                get!(d, kn, 0x00)
+                d[kn] += vn
+            end
+        end
+    else
+        for (k, v) in sugar.substituent
+            sub = decompose(snfg_add_linkage(k))
+            d[Hydroxy()] -= v
+            for (kn, vn) in sub
+                get!(d, kn, 0x00)
+                d[kn] += vn * v
+            end
+        end
+    end
+    d 
+end
+function decompse(sugar::AbstractGlycan) 
+    comp = composition(sugar)
+    d = Dict{AbstractChemical, UInt8}(Hydroxy() => 0x02, OLinkage() => 0x00)
+    for (k, v) in comp 
+        sub = decompose(k)
+        for (kn, vn) in sub
+            get!(d, kn, 0x00)
+            d[kn] += v * vn
+        end
+        d[Hydroxy()] -= v * 0x02
+        d[Olinkage()] += v
+    end
+    d
+end
+
+snfg_add_linkage(x, l = OLinkage()) = XLinkedFunctionalGroup(x, l)
+snfg_add_linkage(x::Amino, l = OLinkage()) = x
+snfg_add_linkage(x::Tauryl, l = OLinkage()) = x
+snfg_add_linkage(x::Nformyl, l = OLinkage()) = x
+snfg_add_linkage(x::Nacetyl, l = OLinkage()) = x
+snfg_add_linkage(x::Oformyl, l = OLinkage()) = x
+snfg_add_linkage(x::Oacetyl, l = OLinkage()) = x
+snfg_add_linkage(x::Methyl, l = OLinkage()) = l == OLinkage() ? Methoxy() : XLinkedFunctionalGroup(x, l)
+snfg_add_linkage(x::Ethyl, l = OLinkage()) = l == OLinkage() ? Ethoxy() : XLinkedFunctionalGroup(x, l)
+snfg_add_linkage(x::Formyl, l = OLinkage()) = l == OLinkage() ? Oformyl() : l == Nlinkage() ? Nformyl() : XLinkedFunctionalGroup(x, l)
+snfg_add_linkage(x::Acetyl, l = OLinkage()) = l == OLinkage() ? Oacetyl() : l == Nlinkage() ? Nacetyl() : XLinkedFunctionalGroup(x, l)
+snfg_linkage(sugar, p) = Hydroxy(), Olinkage()
+snfg_linkage(sugar::AbstractHexosamine, p) = p == 0x02 ? (Amine(), Nlinkage()) : (Hydroxy(), Olinkage())
+snfg_linkage(sugar::NeuraminicAcid, p) = p == 0x05 ? (Amine(), Nlinkage()) : (Hydroxy(), Olinkage())
+snfg_linkage(sugar::AbstractdiaminodideoxynonulosonicAcid, p) = (p == 0x05 || p == 0x07) ? (Amine(), Nlinkage()) : (Hydroxy(), Olinkage())
+
+implicit_config(x) = false
+implicit_config(::Abequose) = true
+implicit_config(::Paratose) = true
+implicit_config(::Tyvelose) = true
+implicit_config(::Colitose) = true
+implicit_config(::SialicAcid) = true
+implicit_config(::AbstractdiaminodideoxynonulosonicAcid) = true
+implicit_config(::SimpleGlcseries) = true
+implicit_config(::Ganglioseries) = true
+implicit_config(::Globoseries) = true
+implicit_config(::Isogloboseries) = true
+implicit_config(::Lactoseries) = true
+implicit_config(::Neolactoseries) = true

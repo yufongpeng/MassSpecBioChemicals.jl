@@ -65,6 +65,15 @@ dehydrogenposition(a::DehydratedChemical) = dehydrogenposition(first(getchaincom
 dehydroxyposition(a::AbstractChemical) = 0x00
 dehydroxyposition(a::DehydratedChemical) = dehydroxyposition(last(getchaincomponent(a)))
 
+dehydrogenfunctionalgroup(a::AbstractChemical; position = nothing) = Hydroxy()
+dehydrogenfunctionalgroup(a::DehydratedChemical; position = nothing) = dehydrogenfunctionalgroup(first(getchaincomponent(a)))
+dehydrogenfunctionalgroup(a::Substituent) = dehydrogenfunctionalgroup(a.chemical; position = a.position)
+dehydrogenfunctionalgroup(a::FunctionalGroup{M, <: Union{Dehydrogen, Odehydrogen, Ndehydrogen}}) where M = dehydrogenfunctionalgroup(parentchemical(a); position = dehydrogenposition(parentchemical(a)))
+dehydroxyfunctionalgroup(a::AbstractChemical; position = nothing) = Hydroxy()
+dehydroxyfunctionalgroup(a::DehydratedChemical; position = nothing) = dehydroxyfunctionalgroup(first(getchaincomponent(a)))
+dehydroxyfunctionalgroup(a::Substituent) = dehydroxyfunctionalgroup(a.chemical; position = a.position)
+dehydroxyfunctionalgroup(a::FunctionalGroup{M, Dehydroxy}) where M = dehydroxyfunctionalgroup(parentchemical(a); position = dehydroxyposition(parentchemical(a)))
+
 isnulllinkage(::Type{<: DehydratedChemical}, l) = l == lk(0x00)
 isnulllinkage(::Type{<: DehydratedChemical}, l::Pair) = all(==(lk(0x00)), l)
 isnulllinkage(::Type{<: ChainedChemical}, l) = first(l) == lk(0x00)
@@ -92,6 +101,7 @@ composition(m::AbstractChemical) = Dict{AbstractChemical, UInt8}(m => 0x01)
 function composition(m::ChainedChemical) 
     d = Dict{AbstractChemical, UInt8}()
     for c in getchaincomponent(m)
+        # iterate composition
         get!(d, c, 0x00)
         d[c] += 0x01 
     end
@@ -100,6 +110,7 @@ end
 function composition(m::DehydratedChemical) 
     d = Dict{AbstractChemical, UInt8}()
     for c in getchaincomponent(m)
+        # iterate composition
         get!(d, c, 0x00)
         d[c] += 0x01 
     end
@@ -128,3 +139,66 @@ requireconfig(m::Type{<: ChainedChemical}) = true
 requireconfig(m::Type{<: DehydratedChemical}) = true
 
 isdissociated(fg) = false
+deisomerize(m::AbstractChemical) = m
+deisomerize(m::DehydratedChemical) = DehydratedChemical(map(deisomerize, m), nothing, nothing)
+deisomerize(m::ChainedChemical) = ChainedChemical(map(deisomerize, m), nothing, nothing)
+decompose(m::AbstractChemical) = Dict(m => 0x01)
+function decompose(m::DehydratedChemical)
+    d = Dict{AbstractChemical, UInt8}(Hydroxy() => 0x01)
+    p = map(decompose, getchaincomponent(m))
+    prev = nothing
+    for ((i, a), c) in zip(enumerate(getchaincomponent(m)), p)
+        for (k, v) in c 
+            get!(d, k, 0x00)
+            d[k] += v 
+        end
+        if isnothing(m.linkage) || isnothing(prev)
+            d[Hydroxy()] -= 0x01
+        elseif prev == CarboxylicAcidGroup()
+            curr = dehydrogenfunctionalgroup(a; position = first(m.linkage[i]))
+            d[curr] -= 0x01
+            d[CarboxylicAcidGroup()] -= 0x01
+            if curr == Hydroxy()
+                d[Ester()] += 0x01
+            elseif curr == Amino() || curr == MethylAmino() 
+                d[Amide()] += 0x01
+            elseif curr == Sulfo()
+                d[Thioester()] += 0x01
+            else
+                d[Oxo()] += 0x01
+            end
+        else
+            d[Hydroxy()] -= 0x01
+        end
+        prev = dehydroxyfunctionalgroup(a; position = first(m.linkage[i]))
+    end
+    d
+end
+
+function decompose(fg::Substituent)
+    d = decompose(df.chemical)
+    if S == Dehydroxy 
+        d[Hydroxy()] -= 0x01 
+    end
+    d
+end
+function decompose(fg::XLinkedFunctionalGroup)
+    d = decompose(fg.functionalgroup)
+    get!(d, fg.linkage, 0x00)
+    d[fg.linkage] += 0x01
+    d
+end
+function decompose(fg::XLinkedFunctionalGroup{CarboxylicLinkage}) 
+    d = decompose(fg.functionalgroup)
+    curr = dehydrogenfunctionalgroup(fg.functionalgroup)
+    if curr == Hydroxy()
+        d[Ester()] += 0x01
+    elseif curr == Amino() || curr == MethylAmino() 
+        d[Amide()] += 0x01
+    elseif curr == Sulfo()
+        d[Thioester()] += 0x01
+    else
+        d[Oxo()] += 0x01
+    end
+    d
+end
