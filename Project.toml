@@ -1,7 +1,7 @@
 name = "MassSpecBioChemicals"
 uuid = "f4388e49-ae39-433b-b921-aa66233e9152"
 authors = ["Yu-Fong Peng <sciphypar@gmail.com>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
