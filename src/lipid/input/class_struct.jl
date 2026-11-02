@@ -83,7 +83,7 @@ function class_struct_SQMG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `SQMG` is not suppoted"))
     gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical,         Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
         (Radyl, )
     )
 end
@@ -91,7 +91,7 @@ function class_struct_SQDG(head, pre, cls, post, pos, sil)
     isnothing(head) || throw(ArgumentError("Headgroup extension on subclass `SQDG` is not suppoted"))
     gly = parse_glycerol_rs(pre)
     (Omodifiedradylglycerol, 
-        makechemical(DehydratedChemical, Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
+        makechemical(DehydratedChemical,         Quinovose([0x06 => Sulfo()]; DL = DForm), gly; sil, linkage = [α(0x01) => lk(0x03)]), 
         (Radyl, Radyl)
     )
 end
@@ -377,8 +377,8 @@ function class_struct_PIP(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, Radyl)
@@ -389,8 +389,8 @@ function class_struct_LPIP(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(1)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, Radyl)
@@ -401,8 +401,8 @@ function class_struct_PIP2(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, Radyl)
@@ -413,8 +413,8 @@ function class_struct_LPIP2(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(2)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 1]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, )
@@ -425,8 +425,8 @@ function class_struct_PIP3(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, Radyl)
@@ -437,8 +437,8 @@ function class_struct_LPIP3(head, pre, cls, post, pos, sil)
     gly = parse_glycerol_rs(pre)
     (Radylglycerophosphate, 
         makechemical(DehydratedChemical, 
-            isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
-                Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
+                    isnothing(pos) ? Inositol([Phosphoryl() => UInt8(3)]) : 
+                        Inositol([parse(UInt8, x.match) => Phosphoryl() for x in eachmatch(r"\d+", pos)][begin:begin + 2]), 
             PhosphoricAcid(), 
             gly; sil), 
         (Radyl, )

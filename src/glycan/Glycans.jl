@@ -1,15 +1,36 @@
 module Glycans
 
-using Reexport, MLStyle
+using Reexport, MLStyle, IterTools
 using ..MassSpecBioChemicals
-@reexport using ..MassSpecBioChemicals.BasicCompounds, ..MassSpecBioChemicals.Metabolites
-using MassSpecChemicals: AbstractChemical
-import MassSpecChemicals: parse_chemical, getchemicalattr
+@reexport using ..MassSpecBioChemicals: isdissociated, Dihydrogen, Hydrogen, Ethane, Ethyl, Ethanol, Ethoxy,
+    Methane, Methyl, Methanol, Methoxy, FormicAcid, Formyl, Oformyl, Formamide, Nformyl, AceticAcid, Acetyl,
+    Oacetyl, Acetamide, Nacetyl, HydrogenBromide, Bromo, HydrogenChloride, Chloro, HydrogenFluoride, Fluoro,
+    HydrogenIodide, Iodo, HydrogenOxide, OxygenAtom, Hydroxy, OLinkage, CarboxylicAcidGroup, CarboxylicLinkage,
+    Oxo, Ether, HydrogenPeroxide, Hydroperoxyl, Epoxy, Peroxy, Ammonia, Amino, MethylAmine, MethylAmino,
+    DimethylAmine, DimethylAmino, TrimethylAmine, TrimethylAmino, NLinkage, HydrogenSulfide, Sulfanyl,
+    SLinkage, Methanethiol, MethanethiolGroup, HydrogenCyanide, Cyano, PhosphoricAcid, Phosphoryl,
+    DiphosphoricAcid, Diphosphoryl, TriphosphoricAcid, Triphosphoryl, SulfuricAcid, Sulfo,
+    NitricAcid, Nitro, Phenolhydroxy, Amide, Ester, Thioester
+    
+@reexport using ..MassSpecBioChemicals.Metabolites
+using MassSpecChemicals: 
+    AbstractChemical, AttributedChemical, ChemicalAttribute, AbstractChemicalParser, 
+    buildattribute
+import MassSpecChemicals: 
+    chemicalname, chemicalformula, chemicalelements, chemicalabbr, chemicalsmiles, 
+    defaultchemicalkwargs, parse_chemical
 using ..MassSpecBioChemicals.Proteins: parse_aa_fg
 using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup, ntotallinkage, leavinggroupelements
-using IterTools
 import Base: show, length
-import ..MassSpecBioChemicals: repr_linkage, makelinkage, transformlinkage, chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, ischainedchemical, requirelinkage, requireconfig, dehydroxyposition, dehydrogenposition, GlyceraldehydeSystem, losswaterelements, deisomerize, decompose
+import ..MassSpecBioChemicals: 
+    repr_linkage, makelinkage, transformlinkage, 
+    chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, 
+    ischainedchemical, requirelinkage, requireconfig, 
+    dehydroxyposition, dehydrogenposition, 
+    GlyceraldehydeSystem, 
+    losswaterelements, deisomerize, decompose, 
+    chiralitize
+
 export Saccharide, Monosaccharide, 
         AbstractHexose, Hexose, Glucose, Mannose, Galactose, Gulose, Altose, Allose, Talose, Idose, Apiose, Fructose, Tagatose, Sorbose, Psicose, 
         AbstractHexosamine, Hexosamine, Glucosamine, Mannosamine, Galactosamine, Gulosamine, Altosamine, Allosamine, Talosamine, Idosamine, 
@@ -171,7 +192,7 @@ export Saccharide, Monosaccharide,
         PAntigen
 
         
-abstract type Saccharide <: AbstractChemical end
+abstract type Saccharide <: AttributedChemical end
 """
 """
 abstract type Monosaccharide{D, P, T} <: Saccharide end
@@ -231,14 +252,30 @@ Inositol.
 """
 struct Inositol{D, P, T} <: Monosaccharide{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Inositol() = Inositol{Nothing, CycliceForm, Nothing}(nothing)
-Inositol(x::T) where T = Inositol{Nothing, CycliceForm, T}(x)
+Inositol(substituent = nothing; LFP = CycliceForm, DL = Nothing, kwargs...) =
+    Inositol{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Inositol{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Inositol{D, P, T}, substituent; kwargs...)
 
 abstract type AbstractGlycan <: Saccharide end
 struct SeriesGlycan{G, T} <: AbstractGlycan 
     type::G
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
+end
+function SeriesGlycan(type, substituent = nothing; new_attr = true, kwargs...)
+    kw = (; pairs(defaultchemicalkwargs(SeriesGlycan, type, substituent))..., kwargs...)
+    attr = Base.structdiff(kw, NamedTuple{(:name, :elements, :abbreviation)})
+    SeriesGlycan(type, substituent, String(kw.name), collect(Pair{String, Int}, kw.elements),
+                 String(kw.abbreviation), buildattribute(new_attr, pairs(attr)))
 end
 # FG => # 
 # MS => #
@@ -454,9 +491,19 @@ Oligosaccarides or Polysaccharides with or without defined order.
 struct Glycan{T} <: AbstractGlycan
     chain::T
     linkage::Vector{Pair{AbstractAnomerposition, Linkageposition}}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Glycan(sugar::Vararg{<: Saccharide}) = Glycan(sugar, Pair{AbstractAnomerposition, Linkageposition}[])
-Glycan(sugar::T, linkage::Vector) where T = Glycan(sugar, convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, linkage))
+function Glycan(chain, linkage::Vector{Pair{AbstractAnomerposition, Linkageposition}}; new_attr = true, kwargs...)
+    kw = (; pairs(defaultchemicalkwargs(Glycan, chain, linkage))..., kwargs...)
+    attr = Base.structdiff(kw, NamedTuple{(:name, :elements, :abbreviation)})
+    Glycan(chain, linkage, String(kw.name), collect(Pair{String, Int}, kw.elements),
+           String(kw.abbreviation), buildattribute(new_attr, pairs(attr)))
+end
+Glycan(chain, linkage::Vector; kwargs...) = Glycan(chain, convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, linkage); kwargs...)
+Glycan(sugar::Vararg{<: Saccharide}; kwargs...) = Glycan(sugar, Pair{AbstractAnomerposition, Linkageposition}[]; kwargs...)
 #= Tuple: order, length of linkage == chain, defined reducing end anomer, 
 S::UInt8
 
@@ -467,21 +514,20 @@ p = 0, default reducing end 1/2
 
 struct GlyComp{T} <: AbstractGlycan
     comp::Vector{Pair{T, UInt8}}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 # Vector{Pair{Monosaccharide, UInt8}}: type => number, no order
-GlyComp(sugar::SeriesGlycan, s = nothing) = GlyComp(generic_glycan(sugar), s)
-function GlyComp(sugar::GlyComp, s = nothing)
-    d = Dict{Monosaccharide, UInt8}()
-    push_monosaccharide!(d, sugar)
-    if !isnothing(s)
-        for (m, n) in s 
-            push_monosaccharide!(d, m, n)
-        end
-    end
-    filter!(x -> last(x) > 0, d)
-    GlyComp(collect(pairs(d)))
+function GlyComp(comp::Vector{<: Pair}; new_attr = true, kwargs...)
+    kw = (; pairs(defaultchemicalkwargs(GlyComp, comp))..., kwargs...)
+    attr = Base.structdiff(kw, NamedTuple{(:name, :elements, :abbreviation)})
+    GlyComp(comp, String(kw.name), collect(Pair{String, Int}, kw.elements),
+            String(kw.abbreviation), buildattribute(new_attr, pairs(attr)))
 end
-function GlyComp(sugar::Glycan, s = nothing)
+GlyComp(sugar::SeriesGlycan, s = nothing; kwargs...) = GlyComp(generic_glycan(sugar), s; kwargs...)
+function GlyComp(sugar::GlyComp, s = nothing; kwargs...)
     d = Dict{Monosaccharide, UInt8}()
     push_monosaccharide!(d, sugar)
     if !isnothing(s)
@@ -490,7 +536,18 @@ function GlyComp(sugar::Glycan, s = nothing)
         end
     end
     filter!(x -> last(x) > 0, d)
-    GlyComp(collect(pairs(d)))
+    GlyComp(collect(pairs(d)); kwargs...)
+end
+function GlyComp(sugar::Glycan, s = nothing; kwargs...)
+    d = Dict{Monosaccharide, UInt8}()
+    push_monosaccharide!(d, sugar)
+    if !isnothing(s)
+        for (m, n) in s 
+            push_monosaccharide!(d, m, n)
+        end
+    end
+    filter!(x -> last(x) > 0, d)
+    GlyComp(collect(pairs(d)); kwargs...)
 end
 function push_monosaccharide!(d, s::Monosaccharide, x = 0x01) 
     n = get!(d, s, 0x00)
@@ -508,6 +565,9 @@ function push_monosaccharide!(d, s::GlyComp)
 end
 
 # D for Abe, Bac, Dha, Kdo, Mur, Par, Tyv; L for Col; DD for Kdn, Neu, Leg, 4eLeg; LL for Pse, Aci; LD for 8eLeg; DL for 8eAci
+include("default.jl")
+include("base.jl")
+include("msc.jl")
 include("glycan.jl")
 include("interface.jl")
 include("io.jl")

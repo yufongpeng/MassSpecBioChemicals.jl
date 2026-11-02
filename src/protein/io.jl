@@ -159,19 +159,8 @@ chiralchemical(::Type{A}, ::Type{RChirality}) where {A <: Union{<: αAminoAcid, 
 chiralchemical(::Type{A}, ::Type{SChirality}) where {A <: Union{Cysteine, Cysteinyl, Selenocysteine, Selenocysteinyl}} = A{DForm}()
 chiralchemical(::Type{A}, ::Type{RChirality}) where {A <: Union{Cysteine, Cysteinyl, Selenocysteine, Selenocysteinyl}} = A{LForm}()
 
-function getchemicalattr(aa::T, ::Val{:name}; kwargs...) where {L, T <: αAminoAcid{L}}
-    s = replace(repr(T), r"\{*[DLForm]*\}*$" => "")
-    L <: LForm ? string("L-", s) : L <: DForm ? string("D-", s) : s
-end
-
-function getchemicalattr(aa::T, ::Val{:abbreviation}; nletter = 3) where {L, T <: αAminoAcid{L}}
-    s = nletter == 3 ? letter3_abbr(aa) : nletter == 1 ? letter1_abbr(aa) : nothing
-    L <: LForm ? string("L-", s) : L <: DForm ? string("D-", s) : s
-end
-getchemicalattr(aa::Peptide, ::Val{:name}; kwargs...) = join([getchemicalattr(x, :name; kwargs...) for x in aa.chain], "-")
-getchemicalattr(aa::Peptide, ::Val{:abbreviation}; kwargs...) = join([getchemicalattr(x, :abbreviation; kwargs...) for x in aa.chain], "-")
-
 letter3_abbr(aa::T) where {T <: αAminoAcid} = PROTEIN_1LETTER_3LETTER[letter1_abbr(aa)]
+
 alpha_rs(aa::αAminoAcid{LForm}) = SChirality()
 alpha_rs(aa::αAminoAcid{DForm}) = RChirality()
 alpha_rs(aa::αAminoAcid{DLForm}) = RSChirality()

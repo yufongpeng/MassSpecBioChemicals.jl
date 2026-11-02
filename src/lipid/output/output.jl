@@ -1,165 +1,80 @@
 include("abbr.jl")
-getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: LipidChemical} = chemicalname(lipid.chemical; kwargs...)
-# Lipid
-# MassSpecChemicals
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: Glycerolipid}
-    position = decode_sn(lipid)
-    if any(==(0), position) && any(>(0), position)
-        pos = chainposition(lipid)
-        return string(chiral_class_abbr(lipid), " ", 
-                        join([string(repr_singlechain(c), p > 0 ? string("(", pos[p], ")") : "") for (p, c) in zip(position, getlipidchain(lipid))], "_"))
-    elseif any(==(0), position)
-        return string(chiral_class_abbr(lipid), " ", join(repr_singlechain.(getlipidchain(lipid)), "_"))
-    end
-    maxsn = nchainposition(T)
-    rp = String[]
-    cs = repr_singlechain.(getlipidchain(lipid))
-    for i in 1:maxsn
-        j = findfirst(==(i), position)
-        push!(rp, isnothing(j) ? "0:0" : cs[j])
-    end
-    string(chiral_class_abbr(lipid), " ", join(rp, "/"))
-end
-getchemicalattr(lipid::GlycerophosphoNacylethanolamine, ::Val{:name}; kwargs...) = string(chiral_class_abbr(lipid), " ", repr_singlechain(lipid.chain))
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: Glycerophospholipid}
-    position = decode_sn(lipid)
-    if any(==(0), position) && any(>(0), position)
-        pos = chainposition(lipid)
-        return string(chiral_class_abbr(lipid), " ", 
-                        join([string(repr_singlechain(c), p > 0 ? string("(", pos[p], ")") : "") for (p, c) in zip(position, getlipidchain(lipid))], "_"))
-    elseif any(==(0), position)
-        return string(chiral_class_abbr(lipid), " ", join(repr_singlechain.(getlipidchain(lipid)), "_"))
-    end
-    maxsn = nchainposition(T)
-    rp = String[]
-    cs = repr_singlechain.(getlipidchain(lipid))
-    for i in 1:maxsn
-        j = findfirst(==(i), position)
-        push!(rp, isnothing(j) ? "0:0" : cs[j])
-    end
-    string(chiral_class_abbr(lipid), " ", join(rp, "/"))
-end
 
-# function getchemicalattr(lipid::T) where {T <: FattyAcyl{B, <: Tuple}} where B
-#     string(chiral_class_abbr(lipid), " ", join(repr_singlechain.(lipid.chain), "/"))
+# """
+#     decode_sn(lipid)
+
+# Decode snpositioncode into vector of snposition
+# """
+# function decode_sn(lipid::T) where {T <: Lipid}
+#     n = length(getlipidchain(lipid))
+#     position = zeros(Int, n)
+#     sn = lipid.sn
+#     ep = n - 1
+#     bs = nchainposition(T) + 1
+#     for i in eachindex(position)
+#         p, sn = divrem(sn, bs ^ ep)
+#         position[i] = p
+#         ep -= 1
+#     end
+#     position
 # end
 
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: FattyAcyl}
-    string(chiral_class_abbr(lipid), " ", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""))
-end
+# """
+#     repr_position(lipid)
 
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: Union{NacylAlkylAmine, FattyAcylEster}}
-    if ncarbon(lipid.backbone.chain) == 0
-        string(chiral_class_abbr(lipid), " ", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""))
-    else
-        string(replace(chemicalname(lipid.backbone), chiral_class_abbr(lipid.backbone) => chiral_class_abbr(lipid)), "/", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""))
-    end
-end
+# Decode headgroup position code into headgroup position representation
+# """
+# function repr_position(lipid::T) where {T <: SphingoBone}
+#     p = Int(lipid.position)
+#     if length(tuplize(lipid.chirality)) == 2
+#         p1, p2 = divrem(p, 32)
+#         if iszero(p1) && iszero(p2)
+#             ""
+#         elseif iszero(p1) 
+#             rc = repr_chirality(lipid.chirality; bracket = false)
+#             string("(", p2, rc, ")") 
+#         else
+#             rc = repr_chirality.(lipid.chirality; bracket = false)
+#             string("(", p1, rc[1], ",", p2, rc[2], ")")
+#         end
+#     elseif iszero(p)
+#         ""
+#     else
+#         rc = repr_chirality(lipid.chirality; bracket = false)
+#         string("(", p, rc, ")") 
+#     end
+# end
 
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: FattyAcylEstolid}
-    if ncarbon(lipid.backbone.chain) == 0
-        string(chiral_class_abbr(lipid), " ", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""))
-    elseif iszero(lipid.position)
-        string(chiral_class_abbr(lipid), " ", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""), "/", replace(chemicalname(lipid.backbone), string(chiral_class_abbr(lipid.backbone), " ") => ""))
-    else
-        i = Int(lipid.position)
-        l = lipid.backbone
-        id = findfirst(x -> (Int(first(x)) == i) && (last(x) == Hydroxy()), l.chain.substituent)
-        sub = l.chain.substituent[setdiff(eachindex(l.chain.substituent), [id])]
-        id = findfirst(x -> Int(first(x)) == i, l.chain.chirality)
-        rs = last(l.chain.chirality[id])
-        l = MonoFattyAcyl(l.backbone, CarbonChain{Acyl}(l.chain.carbon, l.chain.doublebond, sub, l.chain.chirality, l.chain.isotopiclabel))
-        string(chiral_class_abbr(lipid), " ", replace(repr_singlechain(lipid.chain), r"[OP]-" => ""), "/", i, "O(", l, ")", repr_chirality(rs))
-    end
-end
+# repr_position(lipid::T) where {T <: SphingoBone{Nothing}} = ""
 
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: Sphingolipid{H, <: Tuple}} where H
-    isnothing(lipid.headgroup) && return string(chiral_class_abbr(lipid), " ", join(repr_singlechain.(lipid.chain), "/"))
-    position = repr_position(lipid)
-    string(chiral_class_abbr(lipid), position, " ", join(repr_singlechain.(lipid.chain), "/"))
-end
-
-function getchemicalattr(lipid::T, ::Val{:name}; kwargs...) where {T <: Sphingolipid{H, <: CarbonChain}} where H
-    isnothing(lipid.headgroup) && return string(chiral_class_abbr(lipid), " ", repr_singlechain(lipid.chain))
-    position = repr_position(lipid)
-    string(chiral_class_abbr(lipid), position, " ", repr_singlechain(lipid.chain))
-end
-
-"""
-    decode_sn(lipid)
-
-Decode snpositioncode into vector of snposition
-"""
-function decode_sn(lipid::T) where {T <: Lipid}
-    n = length(getlipidchain(lipid))
-    position = zeros(Int, n)
-    sn = lipid.sn
-    ep = n - 1
-    bs = nchainposition(T) + 1
-    for i in eachindex(position)
-        p, sn = divrem(sn, bs ^ ep)
-        position[i] = p
-        ep -= 1
-    end
-    position
-end
-
-"""
-    repr_position(lipid)
-
-Decode headgroup position code into headgroup position representation
-"""
-function repr_position(lipid::T) where {T <: SphingoBone}
-    p = Int(lipid.position)
-    if length(tuplize(lipid.chirality)) == 2
-        p1, p2 = divrem(p, 32)
-        if iszero(p1) && iszero(p2)
-            ""
-        elseif iszero(p1) 
-            rc = repr_chirality(lipid.chirality; bracket = false)
-            string("(", p2, rc, ")") 
-        else
-            rc = repr_chirality.(lipid.chirality; bracket = false)
-            string("(", p1, rc[1], ",", p2, rc[2], ")")
-        end
-    elseif iszero(p)
-        ""
-    else
-        rc = repr_chirality(lipid.chirality; bracket = false)
-        string("(", p, rc, ")") 
-    end
-end
-
-repr_position(lipid::T) where {T <: SphingoBone{Nothing}} = ""
-
-function repr_position(lipid::T) where {T <: MixSphingoBone}
-    ps = Int.(lipid.position)
-    s = Vector{String}(undef, length(ps))
-    for (i, (p, c)) in enumerate(zip(ps, lipid.chirality))
-        if length(tuplize(c)) == 2
-            p1, p2 = divrem(p, 32)
-            s[i] = if iszero(p1) && iszero(p2)
-                ""
-            elseif iszero(p1) 
-                rc = repr_chirality(c; bracket = false)
-                string(p2, rc) 
-            else
-                rc = repr_chirality.(c; bracket = false)
-                string(p1, rc[1], ",", p2, rc[2])
-            end
-        elseif iszero(p)
-            s[i] = ""
-        else
-            rc = repr_chirality(c; bracket = false)
-            s[i] = string(p, rc) 
-        end
-    end
-    if all(isempty, s)
-        "" 
-    else
-        string("(", join(s, ","), ")")
-    end
-end
+# function repr_position(lipid::T) where {T <: MixSphingoBone}
+#     ps = Int.(lipid.position)
+#     s = Vector{String}(undef, length(ps))
+#     for (i, (p, c)) in enumerate(zip(ps, lipid.chirality))
+#         if length(tuplize(c)) == 2
+#             p1, p2 = divrem(p, 32)
+#             s[i] = if iszero(p1) && iszero(p2)
+#                 ""
+#             elseif iszero(p1) 
+#                 rc = repr_chirality(c; bracket = false)
+#                 string(p2, rc) 
+#             else
+#                 rc = repr_chirality.(c; bracket = false)
+#                 string(p1, rc[1], ",", p2, rc[2])
+#             end
+#         elseif iszero(p)
+#             s[i] = ""
+#         else
+#             rc = repr_chirality(c; bracket = false)
+#             s[i] = string(p, rc) 
+#         end
+#     end
+#     if all(isempty, s)
+#         "" 
+#     else
+#         string("(", join(s, ","), ")")
+#     end
+# end
 
 """
     repr_db(chain)
@@ -328,57 +243,29 @@ function skip_olinkage(sub::Vector{<: Pair{UInt8, <: AbstractFunctionalGroup}})
 end
 skip_olinkage(sub) = sub
 
-repr_class_rs(lipid::Lipid) = ""
-function repr_class_rs(lipid::Union{Glycerolipid, Glycerophospholipid})
-    ch = map(x -> repr_chirality(x; bracket = false), tuplize(lipid.chirality))
-    dot = ["'" ^ (i - 1) for i in eachindex(ch)]
-    s = "("
-    for (c, d) in zip(ch, dot)
-        isempty(c) && continue
-        s = string(s, c, d, ",")
-    end
-    s = s[begin:end - 1]
-    isempty(s) ? "" : string(s, ")-")
-end
-for x in NAAA
-    T = PROTEIN_3LETTER_AA[string(x)]
-    @eval function repr_class_rs(c::NacylAmine{<: includeSIL($T)}) 
-        rs = repr_chirality(first(typeof(first(getlipidbody(c))).parameters)())
-        isempty(rs) ? "" : string(rs, "-")
-    end
-end
+# repr_class_rs(lipid::Lipid) = ""
+# function repr_class_rs(lipid::Union{Glycerolipid, Glycerophospholipid})
+#     ch = map(x -> repr_chirality(x; bracket = false), tuplize(lipid.chirality))
+#     dot = ["'" ^ (i - 1) for i in eachindex(ch)]
+#     s = "("
+#     for (c, d) in zip(ch, dot)
+#         isempty(c) && continue
+#         s = string(s, c, d, ",")
+#     end
+#     s = s[begin:end - 1]
+#     isempty(s) ? "" : string(s, ")-")
+# end
+# for x in NAAA
+#     T = PROTEIN_3LETTER_AA[string(x)]
+#     @eval function repr_class_rs(c::NacylAmine{<: $T}) 
+#         rs = repr_chirality(first(typeof(first(getlipidbody(c))).parameters)())
+#         isempty(rs) ? "" : string(rs, "-")
+#     end
+# end
 
-function repr_class_rs(c::FattyAcylCarnitine) 
-    rs = repr_chirality(first(typeof(first(getlipidbody(c))).parameters)())
-    isempty(rs) ? "" : string(rs, "-")
-end
+# function repr_class_rs(c::FattyAcylCarnitine) 
+#     rs = repr_chirality(first(typeof(first(getlipidbody(c))).parameters)())
+#     isempty(rs) ? "" : string(rs, "-")
+# end
 
 include("smiles.jl")
-
-function Base.show(io::IO, level::AnnotationLevel)
-    print(io, @match level begin
-        &specieslevel                   => "specieslevel"
-        &molecularspecieslevel          => "molecularspecieslevel"
-        &phosphatepositionlevel         => "phosphatepositionlevel"
-        &snpositionlevel                => "snpositionlevel"
-        &dbpositionpartiallevel         => "dbpositionpartiallevel"
-        &dbpositionlevel                => "dbpositionlevel"
-        &dbconfigpartiallevel           => "dbconfigpartiallevel"
-        &dbconfiglevel                  => "dbconfiglevel"
-        &structuredefinedpartiallevel   => "structuredefinedpartiallevel"
-        &structuredefinedlevel          => "structuredefinedlevel"
-        &structurepositionpartiallevel  => "structurepositionpartiallevel"
-        &structurepositionlevel         => "structurepositionlevel"
-        &structureconfigpartiallevel    => "structureconfigpartiallevel"
-        &structureconfiglevel           => "structureconfiglevel"
-        &fullstructurelevel             => "fullstructurelevel"
-        &completestructurelevel         => "completestructurelevel"
-    end)
-end
-
-function Base.show(io::IO, level::PassLevel)
-    print(io, @match level begin
-        &passphosphatepositionlevel     => "passphosphatepositionlevel"
-        &passsnpositionlevel            => "passsnpositionlevel"
-    end)
-end

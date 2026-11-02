@@ -67,57 +67,11 @@ function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospho
     length(mchain) > maxsn && throw(ArgumentError("Maximal number of chains is $maxsn, got $(length(mchain))"))
     infos = [parse_singlecarbonchain(m) for m in mchain]
     pos = [parse_chainposition(Radyl, info) for info in infos]
-    isn = findall(x -> !isnothing(match(r"^\(sn.*\)$", string(x))), pos)
-    if !isempty(isn)
-        id = collect(eachindex(pos))
-        id = vcat(setdiff!(id, isn), isn)
-        infos = infos[id]
-        pos = pos[id]
-        mchain = mchain[id]
-    end
-    if length(pos) > 1 && any(==(:inorder), @view pos[begin + 1:end])
-        allequal(pos[begin + 1:end]) || throw(ArgumentError("Chain separater should be all \"/\" or \"\\\""))
-        pos[begin] = :inorder
-    end
-    position = map(enumerate(pos)) do (i, c)
-        @match c begin 
-            :start => 0x00
-            :inorder => UInt8(i)
-            :noorder => 0x00
-            r"\(sn.*\)" => UInt8(findfirst(==(replace(c, "(" => "", ")" => "")), chainposition(Con)))
-            _  => throw(ArgumentError("Invalid chain position, \"$(mchain[i])\""))
-        end
-    end
-    if !isempty(isn)
-        id = sortperm(position; alg = MergeSort)
-        infos = infos[id]
-        position = position[id]
-        mchain = mchain[id]
-    end
-    
-    carbonchain = if length(mchain) == maxsn
-        [make_carbonchain(Radyl, info) for info in infos] # ordered/unordered, ex TG
-    elseif length(mchain) == length(echain) # unordered
-        all(==(:inorder), pos) && throw(ArgumentError("Expected number of chains in order is $maxsn, got $(length(mchain)); change chain separater to \"_\""))
-        [make_carbonchain(Radyl, info) for info in infos]
-    else
-        # remove sn
-        # sort 
-        nr = length(mchain) - length(isn)
-        ne = length(echain) - length(isn)
-        snx = ne ÷ nr
-        sns = repeat([snx], nr)
-        δ = ne - nr * snx
-        i = firstindex(sns) # large => small ? 
-        while δ > 0
-            δ -= 1
-            sns[i] += 1
-            i += 1
-        end
-        sns = vcat(sns, repeat([1], length(isn)))
-        [sn == 1 ? make_carbonchain(Radyl, info) : 
-                        make_carbonchain(ntuple(i -> Radyl, sn), info) for (sn, info) in zip(sns, infos)]
-    end
+    isn = move_explicit_lipid_chains!(pos, infos, mchain)
+    resolve_chain_order!(pos)
+    position = uint8ize_sn(Con, pos, mchain)
+    sort_explicit_lipid_chains!(position, isn, infos, mchain)
+    carbonchain = _make_lipid_chain_groups(echain, infos, pos, isn, maxsn, mchain)
 
     allunique(filter(!=(0x00), position)) || throw(ArgumentError("Overlapped chain position, \"$schain\""))
     
@@ -132,12 +86,7 @@ function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospho
     id = findall(x -> ncarbon(x) > 0, carbonchain)
     carbonchain = carbonchain[id]
     position = position[id]
-    sn = maxsn > 3 ? 0x0000 : 0x00
-    bs = convert(typeof(sn), maxsn + 1)
-    for p in position
-        sn *= bs
-        sn += p
-    end
+    sn = encode_sn(Con, position)
     # check chiral for parse_chainchirality
     # ch_pos = config_chain(Con)
     # if all(==(:inorder), pos)
@@ -152,6 +101,33 @@ function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospho
     # end
     length(carbonchain) == 1 ? first(carbonchain) : ntuple(i -> carbonchain[i], length(carbonchain)), sn
     # prev = prev * base + next
+end
+
+function _make_lipid_chain_groups(echain, infos, positions, explicit, maxsn, chains)
+    if length(chains) == maxsn
+        return [make_carbonchain(Radyl, info) for info in infos]
+    elseif length(chains) == length(echain)
+        all(==(:inorder), positions) &&
+            throw(ArgumentError("Expected number of chains in order is $maxsn, got $(length(chains)); change chain separater to \"_\""))
+        return [make_carbonchain(Radyl, info) for info in infos]
+    end
+
+    nremaining = length(chains) - length(explicit)
+    positions_remaining = length(echain) - length(explicit)
+    if nremaining == 0
+        return [make_carbonchain(Radyl, info) for info in infos]
+    end
+    chains_per_item = positions_remaining ÷ nremaining
+    counts = fill(chains_per_item, nremaining)
+    extra = positions_remaining - nremaining * chains_per_item
+    for i in eachindex(counts)
+        extra == 0 && break
+        counts[i] += 1
+        extra -= 1
+    end
+    append!(counts, ones(Int, length(explicit)))
+    [count == 1 ? make_carbonchain(Radyl, info) :
+        make_carbonchain(ntuple(_ -> Radyl, count), info) for (count, info) in zip(counts, infos)]
 end
 
 function parse_carbonchain(Con::Type{<: Sphingolipid}, bone, echain, schain)

@@ -5,9 +5,15 @@ Hexuronate.
 """
 struct HexuronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-HexuronicAcid(s::T; LFP = PyranoseForm, DL = DLForm) where T = HexuronicAcid{DL, LFP, T}(s)
-HexuronicAcid(; LFP = PyranoseForm, DL = DLForm) = HexuronicAcid{DL, LFP, Nothing}(nothing)
+HexuronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DLForm, kwargs...) =
+    HexuronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+HexuronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(HexuronicAcid{D, P, T}, substituent; kwargs...)
 """
     GlucuronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
@@ -15,9 +21,15 @@ Glucuronic acid.
 """
 struct GlucuronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-GlucuronicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = GlucuronicAcid{DL, LFP, T}(s)
-GlucuronicAcid(; LFP = PyranoseForm, DL = DForm) = GlucuronicAcid{DL, LFP, Nothing}(nothing)
+GlucuronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    GlucuronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+GlucuronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(GlucuronicAcid{D, P, T}, substituent; kwargs...)
 """
     MannuronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
@@ -25,9 +37,15 @@ Mannuronic acid.
 """
 struct MannuronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-MannuronicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = MannuronicAcid{DL, LFP, T}(s)
-MannuronicAcid(; LFP = PyranoseForm, DL = DForm) = MannuronicAcid{DL, LFP, Nothing}(nothing)
+MannuronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    MannuronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+MannuronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(MannuronicAcid{D, P, T}, substituent; kwargs...)
 """
     GalacturonicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
@@ -35,56 +53,92 @@ Galactcuronic acid.
 """
 struct GalacturonicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-GalacturonicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = GalacturonicAcid{DL, LFP, T}(s)
-GalacturonicAcid(; LFP = PyranoseForm, DL = DForm) = GalacturonicAcid{DL, LFP, Nothing}(nothing)
+GalacturonicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    GalacturonicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+GalacturonicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(GalacturonicAcid{D, P, T}, substituent; kwargs...)
 """
     GuluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
 GuluronicAcid.
 """
-struct GuluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}    
+struct GuluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-GuluronicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = GuluronicAcid{DL, LFP, T}(s)
-GuluronicAcid(; LFP = PyranoseForm, DL = DForm) = GuluronicAcid{DL, LFP, Nothing}(nothing)
+GuluronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    GuluronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+GuluronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(GuluronicAcid{D, P, T}, substituent; kwargs...)
 """
     AlturonicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
 AlturonicAcid.
 """
-struct AlturonicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}    
+struct AlturonicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-AlturonicAcid(s::T; LFP = PyranoseForm, DL = LForm) where T = AlturonicAcid{DL, LFP, T}(s)
-AlturonicAcid(; LFP = PyranoseForm, DL = LForm) = AlturonicAcid{DL, LFP, Nothing}(nothing)
+AlturonicAcid(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    AlturonicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+AlturonicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(AlturonicAcid{D, P, T}, substituent; kwargs...)
 """
     AlluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
 AlluronicAcid.
 """
-struct AlluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}    
+struct AlluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-AlluronicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = AlluronicAcid{DL, LFP, T}(s)
-AlluronicAcid(; LFP = PyranoseForm, DL = DForm) = AlluronicAcid{DL, LFP, Nothing}(nothing)
+AlluronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    AlluronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+AlluronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(AlluronicAcid{D, P, T}, substituent; kwargs...)
 """
     TaluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
 TaluronicAcid.
 """
-struct TaluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}    
+struct TaluronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-TaluronicAcid(s::T; LFP = PyranoseForm, DL = DForm) where T = TaluronicAcid{DL, LFP, T}(s)
-TaluronicAcid(; LFP = PyranoseForm, DL = DForm) = TaluronicAcid{DL, LFP, Nothing}(nothing)
+TaluronicAcid(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    TaluronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+TaluronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(TaluronicAcid{D, P, T}, substituent; kwargs...)
 """
     IduronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
 
 IduronicAcid.
 """
-struct IduronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}    
+struct IduronicAcid{D, P, T} <: AbstractHexuronicAcid{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-IduronicAcid(s::T; LFP = PyranoseForm, DL = LForm) where T = IduronicAcid{DL, LFP, T}(s)
-IduronicAcid(; LFP = PyranoseForm, DL = LForm) = IduronicAcid{DL, LFP, Nothing}(nothing)
+IduronicAcid(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    IduronicAcid{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+IduronicAcid{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(IduronicAcid{D, P, T}, substituent; kwargs...)

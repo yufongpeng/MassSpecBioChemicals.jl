@@ -1,6 +1,6 @@
 
 # MassSpecChemicals, SMILES
-function getchemicalattr(lipid::FattyAcyl, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::FattyAcyl; onlycarbonchain = false)
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     smi = chemicalsmiles_carbonchain(lipid.chain)
@@ -10,7 +10,7 @@ function getchemicalattr(lipid::FattyAcyl, ::Val{:SMILES}; onlycarbonchain = fal
     isempty(smib) ? string(lg, smi) : string(lg, "(", smib, ")", smi)
 end
 
-function getchemicalattr(lipid::FattyAcylEstolid, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::FattyAcylEstolid; onlycarbonchain = false)
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     smi = chemicalsmiles_carbonchain(lipid.chain)
@@ -26,7 +26,7 @@ function getchemicalattr(lipid::FattyAcylEstolid, ::Val{:SMILES}; onlycarbonchai
     string(smib[begin:i + 2], smi, smib[i + 3:end])
 end
 
-function getchemicalattr(lipid::WaxEster, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::WaxEster; onlycarbonchain = false)
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     smi = chemicalsmiles_carbonchain(lipid.chain)
@@ -43,7 +43,7 @@ function getchemicalattr(lipid::WaxEster, ::Val{:SMILES}; onlycarbonchain = fals
     string(smib[begin:i + 2], smi, smib[i + 3:end])
 end
 
-function getchemicalattr(lipid::Monoradylglycerol, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Monoradylglycerol; onlycarbonchain = false)
     # check
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     p = only(decode_sn(lipid))
@@ -53,7 +53,7 @@ function getchemicalattr(lipid::Monoradylglycerol, ::Val{:SMILES}; onlycarboncha
     next = r[lastindex(r) - p + 1].match.offset
     string(smi[begin:next + 2], c, smi[next + 3:end])
 end
-function getchemicalattr(lipid::Diradylglycerol, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Diradylglycerol; onlycarbonchain = false)
     # check
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     position = decode_sn(lipid)
@@ -73,7 +73,7 @@ function getchemicalattr(lipid::Diradylglycerol, ::Val{:SMILES}; onlycarbonchain
     s *= smi[prev:end]
 end
 
-function getchemicalattr(lipid::Triradylglycerol, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Triradylglycerol; onlycarbonchain = false)
     # check
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     position = decode_sn(lipid)
@@ -93,7 +93,7 @@ function getchemicalattr(lipid::Triradylglycerol, ::Val{:SMILES}; onlycarbonchai
     s *= smi[prev:end]
 end
 
-function getchemicalattr(lipid::Radyldiglycerol, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Radyldiglycerol; onlycarbonchain = false)
     # check
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     position = decode_sn(lipid)
@@ -115,7 +115,7 @@ function getchemicalattr(lipid::Radyldiglycerol, ::Val{:SMILES}; onlycarbonchain
     s *= smi[prev:end]
 end
 
-function getchemicalattr(lipid::Radyltriglycerol, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Radyltriglycerol; onlycarbonchain = false)
     # check
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     position = decode_sn(lipid)
@@ -137,21 +137,21 @@ function getchemicalattr(lipid::Radyltriglycerol, ::Val{:SMILES}; onlycarbonchai
     s *= smi[prev:end]
 end
 
-function getchemicalattr(lipid::SphingoidBase, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::SphingoidBase; onlycarbonchain = false)
     # check
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     chemicalsmiles_carbonchain(lipid.chain)
 end
 
-function getchemicalattr(lipid::Lysosulfonolipid, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Lysosulfonolipid; onlycarbonchain = false)
     # check
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
     chemicalsmiles_carbonchain(lipid.chain)
 end
 
-function getchemicalattr(lipid::Ceramide, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Ceramide; onlycarbonchain = false)
     # check
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
@@ -174,7 +174,7 @@ function getchemicalattr(lipid::Ceramide, ::Val{:SMILES}; onlycarbonchain = fals
     string(first(cs)[begin:id[2]], cs[begin + 1], first(cs)[last(id):end])
 end
 
-function getchemicalattr(lipid::Sulfonolipid, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Sulfonolipid; onlycarbonchain = false)
     # check
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
@@ -197,7 +197,7 @@ function getchemicalattr(lipid::Sulfonolipid, ::Val{:SMILES}; onlycarbonchain = 
     string(first(cs)[begin:id[2]], cs[begin + 1], first(cs)[last(id):end])
 end
 
-function getchemicalattr(lipid::Acylceramide, ::Val{:SMILES}; onlycarbonchain = false)
+function chemicalsmiles(lipid::Acylceramide; onlycarbonchain = false)
     # check
     lipid = onlycarbonchain ? dissociate_carbonchain(lipid) : lipid
     any(>=(fullstructurelevel), annotationlevel(lipid)) || return ""
@@ -220,10 +220,10 @@ function getchemicalattr(lipid::Acylceramide, ::Val{:SMILES}; onlycarbonchain = 
     string(first(cs)[begin:id[2]], cs[begin + 1], first(cs)[last(id):end])
 end
 
-getchemicalattr(lipid::Omodifiedradylglycerol, ::Val{:SMILES}; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
-getchemicalattr(lipid::Glycerophospholipid, ::Val{:SMILES}; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
-getchemicalattr(lipid::MixSphingoBone, ::Val{:SMILES}; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
-getchemicalattr(lipid::SphingoBone, ::Val{:SMILES}; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
+chemicalsmiles(lipid::Omodifiedradylglycerol; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
+chemicalsmiles(lipid::Glycerophospholipid; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
+chemicalsmiles(lipid::MixSphingoBone; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
+chemicalsmiles(lipid::SphingoBone; onlycarbonchain = false) = onlycarbonchain ? chemicalsmiles(dissociate_carbonchain(lipid); onlycarbonchain = true) : ""
 
 # to full structure level
 # delete headgroup
@@ -251,7 +251,7 @@ function push_smiles_db!(quec, posc, slash)
     end
 end
 
-getchemicalattr(chain::CarbonChain{<: CarbonChainType}, ::Val{:SMILES}; kwargs...) = chemicalsmiles_carbonchain(chain)
+chemicalsmiles(chain::CarbonChain{<: CarbonChainType}; kwargs...) = chemicalsmiles_carbonchain(chain)
 
 """
     chemicalsmiles_carbonchain(chain)

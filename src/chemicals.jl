@@ -1,3 +1,44 @@
+function ChainedChemical(chain, linkage, config; name = chemicaldefaultname(ChainedChemical, chain),
+                         elements = chemicaldefaultelements(ChainedChemical, chain), abbreviation = chemicaldefaultabbr(ChainedChemical, chain),
+                         new_attr = true, kwargs...)
+    ChainedChemical(chain, linkage, config, String(name), collect(Pair{String, Int}, elements),
+                    String(abbreviation), buildattribute(new_attr, kwargs))
+end
+
+function DehydratedChemical(chain, linkage, config = nothing; name = chemicaldefaultname(DehydratedChemical, chain),
+                            elements = chemicaldefaultelements(DehydratedChemical, chain), abbreviation = chemicaldefaultabbr(DehydratedChemical, chain),
+                            new_attr = true, kwargs...)
+    DehydratedChemical(chain, linkage, config, String(name), collect(Pair{String, Int}, elements),
+                       String(abbreviation), buildattribute(new_attr, kwargs))
+end
+
+function SubstitutedChemical(chemical, substituted, substituent, config; name = chemicalname(chemical),
+                             elements = chemicalelements(chemical), abbreviation = chemicalabbr(chemical),
+                             new_attr = true, kwargs...)
+    SubstitutedChemical(chemical, substituted, substituent, config, String(name),
+                        collect(Pair{String, Int}, elements), String(abbreviation),
+                        buildattribute(new_attr, kwargs))
+end
+
+"""
+    isotopiclabelchemical(::Type{T}, args...; kwargs...) where {T<:AbstractChemical}
+
+Construct a chemical of type `T` with isotopic labeling.
+"""
+function isotopiclabelchemical(::Type{T}, args...; kwargs...) where {T<:AbstractChemical}
+    S, cargs, ckwargs = chiralitize(T, args, kwargs)
+    I, iargs, ikwargs = isotopiclabel(S, cargs, ckwargs)
+    I(iargs...; ikwargs...)
+end
+
+function isotopiclabelchemical(m::AbstractChemical, label)
+    label = IsotopicLabel(label)
+    isnothing(label.isotopiclabel) && return m
+    m = copy(m)
+    pushchemicalattr!(m, :isotopiclabel, label)
+    m
+end
+
 """
     makechemical(m; sil)
     makechemical(::Type{T}, m::T; linkage = nothing, config = nothing, sil = nothing)
@@ -10,11 +51,11 @@ Construct a chemical of type `T`. If multiple chemicals are given, `T` must be c
 * `sil`: stabel isotopic labeling. 
 """
 function makechemical(m; sil)
-    isnothing(sil) ? m : IsotopiclabeledChemical(m, sil)
+    isotopiclabelchemical(m, sil)
 end
 
 function makechemical(::Type{T}, m::T; linkage = nothing, config = nothing, sil = nothing) where T
-    isnothing(sil) ? m : IsotopiclabeledChemical(m, sil)
+    isotopiclabelchemical(m, sil)
 end
 
 function makechemical(::Type{T}, ms...; linkage = nothing, config = nothing, sil = nothing) where T
@@ -25,7 +66,7 @@ function makechemical(::Type{T}, ms...; linkage = nothing, config = nothing, sil
             j = findfirst(x -> i == first(x), sil)
             isnothing(j) ? ms[i] : 
             ischainedchemical(ms[i]) ? makechemical(typeof(ms[i]), ms[i].chain...; linkage = getchainlinkage(ms[i]), config = getchainconfig(ms[i]), sil = last(sil[j])) : 
-            IsotopiclabeledChemical(ms[i], last(sil[j]))
+            isotopiclabelchemical(ms[i], last(sil[j]))
         end
     end
     length(last(chemicals)) == 1 || throw(ArgumentError("Last chemical should be a single chemical"))
@@ -80,7 +121,7 @@ end
 
 function concatchemical(::Type{T}, m::T; linkage = nothing, config = nothing, sil = nothing) where T
     isnothing(sil) && isnothing(linkage) && return m
-    ischainedchemical(m) || return IsotopiclabeledChemical(m, s)
+    ischainedchemical(m) || return isotopiclabelchemical(m, sil)
     ms = getchaincomponent(m)
     if requirelinkage(T)
         ls = getchainlinkage(m)
@@ -95,7 +136,7 @@ function concatchemical(::Type{T}, m::T; linkage = nothing, config = nothing, si
             j = findfirst(x -> i == first(x), sil)
             isnothing(j) ? ms[i] : 
             ischainedchemical(ms[i]) ? makechemical(typeof(ms[i]), ms[i].chain...; linkage = getchainlinkage(ms[i]), config = getchainconfig(ms[i]), sil = last(sil[j])) : 
-            IsotopiclabeledChemical(ms[i], last(sil[j]))
+            isotopiclabelchemical(ms[i], last(sil[j]))
         end
     end
     requirelinkage(T) || return chainedchemical(T, chemicals; config)
@@ -158,7 +199,7 @@ function concatchemical(::Type{T}, ms...; linkage = nothing, config = nothing, s
             j = findfirst(x -> i == first(x), sil)
             isnothing(j) ? ms[i] : 
             ischainedchemical(ms[i]) ? makechemical(typeof(ms[i]), ms[i].chain...; linkage = getchainlinkage(ms[i]), config = getchainconfig(ms[i]), sil = last(sil[j])) : 
-            IsotopiclabeledChemical(ms[i], last(sil[j]))
+            isotopiclabelchemical(ms[i], last(sil[j]))
         end
     end
     requirelinkage(T) ? chainedchemical(T, chemicals; linkage = vcat(lss...), config) : chainedchemical(T, chemicals; config)
@@ -167,8 +208,10 @@ end
 """
 """
 chainedchemical(::Type{<: T}, chemicals; kwargs...) where {T <: AbstractChemical} = throw(MethodError(chainedchemical, (T, chemicals, kwargs...)))
-chainedchemical(::Type{<: ChainedChemical}, chemicals; linkage = nothing, config = nothing, kwargs...) = ChainedChemical(chemicals, linkage, config)
-chainedchemical(::Type{<: DehydratedChemical}, chemicals; linkage = nothing, config = nothing, kwargs...) = DehydratedChemical(chemicals, linkage, config)
+chainedchemical(::Type{<: ChainedChemical}, chemicals; linkage = nothing, config = nothing, kwargs...) =
+    ChainedChemical(chemicals, linkage, config; kwargs...)
+chainedchemical(::Type{<: DehydratedChemical}, chemicals; linkage = nothing, config = nothing, kwargs...) =
+    DehydratedChemical(chemicals, linkage, config; kwargs...)
 
 """
 """

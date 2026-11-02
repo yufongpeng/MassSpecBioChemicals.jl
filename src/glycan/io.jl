@@ -440,7 +440,7 @@ function push_new_glycan!(cs, ls, x, c, d)
 end
 
 """
-    parse_saccharide(s::AbstractString)
+    parse_saccharide(s::AbstractString; explicit_config = false)
 
 Parse saccharide abbreviation into
 * `Monosaccharide`: a single monosaccharide abbreviation, e.g. `Glc`.
@@ -448,15 +448,15 @@ Parse saccharide abbreviation into
 * `SeriesGlycan`: named glycan, e.g. `GQ1bα(3[3]NeuGc/4[3]Neu?(Ac2)/4[4,6]NeuGc8Ac)`.
 * `GlyComp`: glycan composition, e.g. `HexNAcHex3`.
 """
-function parse_saccharide(s::AbstractString)
+function parse_saccharide(s::AbstractString; explicit_config = false)
     try 
-        parse_monosaccharide(s)
+        parse_monosaccharide(s; explicit_config)
     catch
         try 
-            parse_glycan(s)
+            parse_glycan(s; explicit_config)
         catch
             try
-                parse_glycomp(s)
+                parse_glycomp(s; explicit_config)
             catch
                 throw(ArgumentError("Invalid sacchride representation."))
             end
@@ -464,15 +464,15 @@ function parse_saccharide(s::AbstractString)
     end
 end
 
-function parse_glycan(s::AbstractString)
+function parse_glycan(s::AbstractString; explicit_config = false)
     try 
-        parse_series_glycan(s)
+        parse_series_glycan(s; explicit_config)
     catch 
-        parse_generic_glycan(s)
+        parse_generic_glycan(s; explicit_config)
     end
 end
 
-function parse_series_glycan(s::AbstractString)
+function parse_series_glycan(s::AbstractString; explicit_config = false)
     m, s = match(r"([^\(\)]*)(?:\((.*)\))?", s)
     m = replace(m, "alpha" => "α")
     if haskey(GLYCAN_STRUCT, m)
@@ -486,7 +486,7 @@ function parse_series_glycan(s::AbstractString)
     if isnothing(s)
         sub = nothing
     else
-        sub = [parse_glycansub(x) for x in split(s, r"\s*/\s*")]
+        sub = [parse_glycansub(x; explicit_config) for x in split(s, r"\s*/\s*")]
         sub = convert(Vector{Pair{promote_type(typeof.(first.(sub))...), promote_type(typeof.(last.(sub))...)}}, sub)
     end
     g = SeriesGlycan(m, sub)
@@ -494,7 +494,7 @@ function parse_series_glycan(s::AbstractString)
     g
 end
 
-function parse_generic_glycan(s::AbstractString)
+function parse_generic_glycan(s::AbstractString; explicit_config = false)
     p = 1
     cs = Saccharide[]
     ls = Pair{AbstractAnomerposition, Linkageposition}[]
@@ -504,7 +504,7 @@ function parse_generic_glycan(s::AbstractString)
         n = m.match.offset
         if n > p
             rs = collect(eachmatch(r"((?:[DL]+-)*[^-]*?[^\d])(\(?(?:\(a)?(?:\(b)?[αβ]?)(\d*)-(\d*)\)?", s[p:n]))
-            ms = get_monosaccharide.(rs)
+            ms = get_monosaccharide.(rs; explicit_config)
             if !isnothing(linktocheck)
                 dp = dehydrogenposition(first(ms))
                 ls[linktocheck] = first(ls[linktocheck]) => Linkageposition(dp)
@@ -517,7 +517,7 @@ function parse_generic_glycan(s::AbstractString)
             end
             linktocheck = trace ? lastindex(ls) : nothing
         end
-        push!(cs, parse_glycan(first(match(r"^\[?(.*?)\]?$", m.match))))
+        push!(cs, parse_glycan(first(match(r"^\[?(.*?)\]?$", m.match)); explicit_config))
         push!(ls, last(last(cs).linkage))
         p = n + m.match.ncodeunits + 1
     end
@@ -531,7 +531,7 @@ function parse_generic_glycan(s::AbstractString)
         end
     end
     if !isempty(rs)
-        ms = get_monosaccharide.(rs)
+        ms = get_monosaccharide.(rs; explicit_config)
         if !isnothing(linktocheck)
             dp = dehydrogenposition(first(ms))
             ls[linktocheck] = first(ls[linktocheck]) => Linkageposition(dp)
@@ -546,7 +546,7 @@ function parse_generic_glycan(s::AbstractString)
     end
     linktocheck = trace ? lastindex(ls) : nothing
     if li < lastindex(s)
-        push!(cs, parse_monosaccharide(first(match(r"^\[?(.*?)\]?$", s[li:end]))))
+        push!(cs, parse_monosaccharide(first(match(r"^\[?(.*?)\]?$", s[li:end])); explicit_config))
         if !isnothing(linktocheck)
             ls[linktocheck] = first(ls[linktocheck]) => Linkageposition(dehydrogenposition(last(cs)))
         end 
@@ -583,7 +583,7 @@ function split_snfg_sub(mod)
     @inbounds [mod[i:j] for (i, j) in zip(s, e)]
 end
 
-function parse_monosaccharide(s)
+function parse_monosaccharide(s; explicit_config = false)
     m = ""
     mono = nothing
     #return Hex()
@@ -596,7 +596,7 @@ function parse_monosaccharide(s)
                 if implicit_config(M)
                     DL = NoDLForm
                 else
-                    DL = l == "L-" ? LForm : l == "D-" ? DForm : l == "DL-" ? DLForm : nothing
+                    DL = l == "L-" ? LForm : l == "D-" ? DForm : l == "DL-" ? DLForm : explicit_config ? DLForm : nothing
                 end
                 return isnothing(DL) ? M() : M(; DL)
             else
@@ -611,7 +611,7 @@ function parse_monosaccharide(s)
     if implicit_config(M)
         DL = NoDLForm
     else
-        DL = l == "L-" ? LForm : l == "D-" ? DForm : l == "DL-" ? DLForm : nothing
+        DL = l == "L-" ? LForm : l == "D-" ? DForm : l == "DL-" ? DLForm : explicit_config ? DLForm : nothing
     end
     isempty(subs) && return isnothing(DL) ? M() : M(; DL)
     allsub = mapreduce(vcat, subs) do sub
@@ -638,12 +638,12 @@ function parse_monosaccharide(s)
     isnothing(DL) ? M(substituent) : M(substituent; DL)
 end
 
-function get_monosaccharide(x)
+function get_monosaccharide(x; explicit_config = false)
     m, mp, mi, mj = x
-    parse_monosaccharide(first(match(r"^\[?(.*?)\]?$", m)))
+    parse_monosaccharide(first(match(r"^\[?(.*?)\]?$", m)); explicit_config)
 end
 
-function parse_glycansub(mod)
+function parse_glycansub(mod; explicit_config = false)
     if startswith(mod, r"\d")
         # position 
         # config
@@ -655,7 +655,7 @@ function parse_glycansub(mod)
         else
             pos = (parse(UInt8, p), [parse(UInt8, x) for x in split(l, ",")])
         end
-        return pos => parse_monosaccharide(s)
+        return pos => parse_monosaccharide(s; explicit_config)
     else
         for (k, v) in SNFG_SUB
             m = match(Regex(string("^\\(?", k, "\\)?(\\d*)\$")), mod)
@@ -672,31 +672,35 @@ function parse_glycansub(mod)
         end
         m = mod[firstindex(mod):e]
         n = e == lastindex(mod) ? "" : mod[nextind(mod, e):lastindex(mod)]
-        return parse_monosaccharide(m) => (isempty(n) ? 0x01 : parse(UInt8, n))
+        return parse_monosaccharide(m; explicit_config) => (isempty(n) ? 0x01 : parse(UInt8, n))
     end
 end
 
-function add_ldform(mono::T, head) where {L, T <: Monosaccharide{L}} 
+function add_ldform(::Type{<: Monosaccharide{L}}, head) where {L} 
     L <: LForm ? string("L-", head) : L <: DForm ? string("D-", head) : head 
 end
 
-function add_sub(mono::T, head, sub = nothing) where {T <: Monosaccharide}
-    if (isnothing(mono.substituent) || isempty(mono.substituent)) 
+function add_sub(substituent, head, sub = nothing)
+    if (isnothing(substituent) || isempty(substituent)) 
         isnothing(sub) && return head
         sub = [m => snfg_abbr(n) for (m, n) in sub]
-    elseif mono.substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
+    # elseif isnothing(sub)
+    #     sub = substituent
+    elseif substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
         if isnothing(sub)
-            return string(head, join([n == 1 ? string("?", snfg_abbr(m)) : string("?(", snfg_abbr(m), Int(n), ")") for (m, n) in mono.substituent], ""))
+            return string(head, join([n == 1 ? string("?", snfg_abbr(m)) : string("?(", snfg_abbr(m), Int(n), ")") for (m, n) in substituent], ""))
         else
             sub = [snfg_abbr(n) => m for (m, n) in sub]
-            for (m, n) in mono.substituent
+            for (m, n) in substituent
                 for _ in 1:n
                     push!(sub, 0x00 => snfg_abbr(m))
                 end
             end
         end
+    elseif isnothing(sub)
+        sub = [m => snfg_abbr(n) for (m, n) in substituent]
     else
-        sub = [m => snfg_abbr(n) for (m, n) in vcat(sub, mono.substituent)]
+        sub = [m => snfg_abbr(n) for (m, n) in vcat(sub, substituent)]
     end
     sort!(sub)
     ps = ""
@@ -718,15 +722,15 @@ function add_sub(mono::T, head, sub = nothing) where {T <: Monosaccharide}
     string(head, ps)
 end
 
-function add_name(mono::T, head) where {T <: Monosaccharide}
-    (isnothing(mono.substituent) || isempty(mono.substituent)) && return head
-    if mono.substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
-        string(join([n == 1 ? string("?-", lowercase(chemicalname(m; group = false))) : string(join(repeat(["?"], Int(n)), ","), "-", lowercase(chemicalname(m; group = false))) for (m, n) in mono.substituent], "-"), "-", string(T.name.name))
+function add_name(::Type{T}, substituent, head) where {T <: Monosaccharide}
+    (isnothing(substituent) || isempty(substituent)) && return head
+    if substituent isa Vector{<: Pair{<: FunctionalGroup, <: UInt8}}
+        string(join([n == 1 ? string("?-", lowercase(chemicalname(m; group = false))) : string(join(repeat(["?"], Int(n)), ","), "-", lowercase(chemicalname(m; group = false))) for (m, n) in substituent], "-"), "-", string(T.name.name))
     else
         ps = ""
         pp = String[]
         lm = nothing 
-        for (p, m) in mono.substituent
+        for (p, m) in substituent
             if isnothing(lm)
                 lm = m
                 push!(pp, p == 0 ? "?" : string(Int(p)))
@@ -772,10 +776,10 @@ function split_glycomp(glycan::AbstractString)
     @inbounds [glycan[i:j] for (i, j) in zip(s, e)]
 end
 
-function parse_glycomp(s::AbstractString)
+function parse_glycomp(s::AbstractString; explicit_config = false)
     v = mapreduce(vcat, split_glycomp(s)) do x 
         result = Pair{Monosaccharide, UInt8}[]
-        iter_glycomp!(result, x)
+        iter_glycomp!(result, x; explicit_config)
     end
     d = Dict{eltype(v).parameters...}()
     for (m, n) in v 
@@ -786,10 +790,10 @@ function parse_glycomp(s::AbstractString)
     GlyComp(sort!(v; by = x -> (first(x) isa AbstractFunctionalGroup, (repr ∘ first)(x))))
 end
 
-function iter_glycomp!(result::Vector, s::AbstractString)
+function iter_glycomp!(result::Vector, s::AbstractString; explicit_config = false)
     if startswith(s, '(')
         m, n = match(r"^\((.*)\)(\d)*$", s)
-        mono = parse_monosaccharide(m)
+        mono = parse_monosaccharide(m; explicit_config)
         push!(result, mono => isnothing(n) ? 0x01 : parse(UInt8, n))
         return result
     end
@@ -799,7 +803,7 @@ function iter_glycomp!(result::Vector, s::AbstractString)
             return iter_snfg!(result, s[begin + 1:end])
         end
         try
-            mono = parse_monosaccharide(s[begin:i])
+            mono = parse_monosaccharide(s[begin:i]; explicit_config)
             if i == lastindex(s)
                 push!(result, mono => 0x01)
                 return result
@@ -808,12 +812,12 @@ function iter_glycomp!(result::Vector, s::AbstractString)
                 n = match(r"^\d+", s)
                 if isnothing(n)
                     push!(result, mono => 0x01)
-                    return iter_glycomp!(result, s)
+                    return iter_glycomp!(result, s; explicit_config)
                 else
                     i = n.match.offset + n.match.ncodeunits
                     n = parse(UInt8, n.match)
                     push!(result, mono => n)
-                    return i == lastindex(s) ? result : iter_glycomp!(result, s[nextind(s, i):end])
+                    return i == lastindex(s) ? result : iter_glycomp!(result, s[nextind(s, i):end]; explicit_config)
                 end
             end
         catch

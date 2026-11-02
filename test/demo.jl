@@ -9,6 +9,7 @@ Pkg.activate(".")
 
 lpc = "LPC 36:1;O2"
 lpc = "LPC 18:1(2);OH"
+s = "DG 16:0/18:1/0:0"
 s = "PC 18:1(2E);3OH/18:1(1)"
 s = "(S)-PC 18:1(2E);3OH[R],4OH[S]/18:1(16);17Me"
 s = "(S)-PC 18:1(2E);3OH[R],4OH[S]/18:1(16);17Me;10Ep[R]"
@@ -28,13 +29,17 @@ s = "FAM 19:2(3Z,16Z);19CONH2;9OH,10OH,11OH" # Full
 s = "FAM 19:2(3Z,16Z);19CONH2;9OH[R],10OH,11OH[R]"
 s = "FAM 19:2(3Z,16Z);19CONH2;9OH[R],10OH[R],11OH[R]"
 s = "FAL 18:0;9oxo,10oxo,18oxo"
+s = "L-NASer 16:0"
 s = "L-NASer 19:2(3Z,16Z);19oxo;19COSer;9OH[R],10OH[R],11OH[R]" # Full
 s = "L-NASer 19:2(3Z,16Z);19oxo;19CO(L-Ser);9OH[R],10OH[R],11OH[R]"
 s = "L-NASer 19:2(3Z,16Z);19CO(L-Ser-L-Ala);9OH[R],10OH[R],11OH[R]"
 
 s = "FAM 19:2(3Z,15Z);18oxo;18NH2;10OH" # X
 
-
+s = "FA 24:1-ASM 18:1(4E);3OH/24:1(15Z)"
+s = "L-NASer 19:2(3Z,16Z);19CO(L-Ser);9OH[R],10OH[R],11OH[R]"
+s = "Glcβ-SPB(1) 18:1(4E);3OH[S];2H[R]"
+s = "HexCer 18:1;O2/24:1"
 lipid = MBL.parse_lipid(s)
 MBL.annotationlevel(lipid)
 chemicalsmiles(lipid; onlycarbonchain = true)

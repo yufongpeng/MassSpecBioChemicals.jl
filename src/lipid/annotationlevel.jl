@@ -573,7 +573,7 @@ annotationchain(::Union{Carnitine{L}, LacticAcid{L}, Glycerol{L}}) where {L <: U
     molecularspecieslevel,
     specieslevel
 ]
-annotationchain(::Union{Nothing, <: Metabolite, <: BasicCompound}) = [
+annotationchain(::Union{Nothing, <: Metabolite, <: AttributedChemical}) = [
     completestructurelevel,
     fullstructurelevel,
     structureconfiglevel,

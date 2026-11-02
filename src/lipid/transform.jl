@@ -176,7 +176,7 @@ function _dissociate_carbonchain_group(lipid::Union{<: Glycerophospholipid, <: O
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); length(lipid.backbone) - 1)
+    b = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1))
     get!(d, b, 0x00)
     d[b] += 0x01
     dl => (b, sort_chainmodification!(collect(pairs(d))))
@@ -197,7 +197,7 @@ function dissociate_carbonchain_group(lipid::Union{LysophosphatidylNmodifiedetha
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
-        b = dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2)
+        b = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2))
         get!(d, b, 0x00)
         d[b] += 0x01
         dl => (b, sort_chainmodification!(collect(pairs(d))))
@@ -221,7 +221,7 @@ function dissociate_carbonchain_group(lipid::Union{PhosphatidylNmodifiedethanola
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
-        b = dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2)
+        b = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(deletechemicalat(lipid.backbone, [1, length(lipid.backbone)]); position = length(lipid.backbone) - 2))
         get!(d, b, 0x00)
         d[b] += 0x01
         dl => (b, sort_chainmodification!(collect(pairs(d))))
@@ -243,7 +243,7 @@ function dissociate_carbonchain_group(lipid::Union{Bisradylglycerophosphate, Rad
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1)
+    b = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1))
     get!(d, b, 0x00)
     d[b] += 0x01
     dl => (lipid.backbone, sort_chainmodification!(collect(pairs(d))))
@@ -254,7 +254,7 @@ function dissociate_carbonchain_group(lipid::Bisradylglycerophosphoglycerol; pre
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
-    b = dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1)
+    b = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(deletechemicalat(lipid.backbone, length(lipid.backbone)); position = length(lipid.backbone) - 1))
     get!(d, b, 0x00)
     d[b] += 0x01
     dl => (lipid.backbone, sort_chainmodification!(collect(pairs(d))))

@@ -5,9 +5,15 @@ Deoxyhexose.
 """
 struct Deoxyhexose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Deoxyhexose(s::T; LFP = PyranoseForm, DL = DLForm) where T = Deoxyhexose{DL, LFP, T}(s)
-Deoxyhexose(; LFP = PyranoseForm, DL = DLForm) = Deoxyhexose{DL, LFP, Nothing}(nothing)
+Deoxyhexose(substituent = nothing; LFP = PyranoseForm, DL = DLForm, kwargs...) =
+    Deoxyhexose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Deoxyhexose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Deoxyhexose{D, P, T}, substituent; kwargs...)
 """
     Quinovose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
 
@@ -15,9 +21,15 @@ Quinovose.
 """
 struct Quinovose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Quinovose(s::T; LFP = PyranoseForm, DL = DForm) where T = Quinovose{DL, LFP, T}(s)
-Quinovose(; LFP = PyranoseForm, DL = DForm) = Quinovose{DL, LFP, Nothing}(nothing)
+Quinovose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Quinovose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Quinovose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Quinovose{D, P, T}, substituent; kwargs...)
 # Qui = 6dGlc
 # SQui = 6SQui
 """
@@ -27,9 +39,15 @@ Rhamnose.
 """
 struct Rhamnose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Rhamnose(s::T; LFP = PyranoseForm, DL = LForm) where T = Rhamnose{DL, LFP, T}(s)
-Rhamnose(; LFP = PyranoseForm, DL = LForm) = Rhamnose{DL, LFP, Nothing}(nothing)
+Rhamnose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Rhamnose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Rhamnose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Rhamnose{D, P, T}, substituent; kwargs...)
 # Rha = 6dMan(L)
 """
     Fucose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
@@ -38,9 +56,15 @@ Fucose.
 """
 struct Fucose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Fucose(s::T; LFP = PyranoseForm, DL = LForm) where T = Fucose{DL, LFP, T}(s)
-Fucose(; LFP = PyranoseForm, DL = LForm) = Fucose{DL, LFP, Nothing}(nothing)
+Fucose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Fucose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Fucose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Fucose{D, P, T}, substituent; kwargs...)
 # Fuc = 6dGal(L)
 """
     Sixdeoxygulose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
@@ -49,9 +73,15 @@ Fucose(; LFP = PyranoseForm, DL = LForm) = Fucose{DL, LFP, Nothing}(nothing)
 """
 struct Sixdeoxygulose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Sixdeoxygulose(s::T; LFP = PyranoseForm, DL = DForm) where T = Sixdeoxygulose{DL, LFP, T}(s)
-Sixdeoxygulose(; LFP = PyranoseForm, DL = DForm) = Sixdeoxygulose{DL, LFP, Nothing}(nothing)
+Sixdeoxygulose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Sixdeoxygulose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Sixdeoxygulose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Sixdeoxygulose{D, P, T}, substituent; kwargs...)
 # 6dGul (no NAc)
 """
     Sixdeoxyaltose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
@@ -60,9 +90,15 @@ Sixdeoxygulose(; LFP = PyranoseForm, DL = DForm) = Sixdeoxygulose{DL, LFP, Nothi
 """
 struct Sixdeoxyaltose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Sixdeoxyaltose(s::T; LFP = PyranoseForm, DL = LForm) where T = Sixdeoxyaltose{DL, LFP, T}(s)
-Sixdeoxyaltose(; LFP = PyranoseForm, DL = LForm) = Sixdeoxyaltose{DL, LFP, Nothing}(nothing)
+Sixdeoxyaltose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Sixdeoxyaltose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Sixdeoxyaltose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Sixdeoxyaltose{D, P, T}, substituent; kwargs...)
 """
     Sixdeoxytalose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
 
@@ -70,6 +106,12 @@ Sixdeoxyaltose(; LFP = PyranoseForm, DL = LForm) = Sixdeoxyaltose{DL, LFP, Nothi
 """
 struct Sixdeoxytalose{D, P, T} <: AbstractDeoxyhexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Sixdeoxytalose(s::T; LFP = PyranoseForm, DL = DForm) where T = Sixdeoxytalose{DL, LFP, T}(s)
-Sixdeoxytalose(; LFP = PyranoseForm, DL = DForm) = Sixdeoxytalose{DL, LFP, Nothing}(nothing)
+Sixdeoxytalose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Sixdeoxytalose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Sixdeoxytalose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Sixdeoxytalose{D, P, T}, substituent; kwargs...)

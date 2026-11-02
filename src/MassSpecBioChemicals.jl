@@ -1,21 +1,35 @@
 module MassSpecBioChemicals
 
 using Reexport
-@reexport using MassSpecChemicals
-using MassSpecChemicals: AbstractChemical
 using IterTools
+@reexport using MassSpecChemicals
+using MassSpecChemicals: 
+    AbstractChemical, AttributedChemical, ChemicalAttribute, 
+    pushchemicalattr_new!,
+    buildattribute
+    
 import Base: show, length
-import MassSpecChemicals: getchemicalattr
-export FunctionalGroup, UnknownGroup, UnknownChemical, LeavingGroup, Dehydrogen, Odehydrogen, Ndehydrogen, Didehydrogen, Odidehydrogen, Ndidehydrogen, Deamine, Dehydroxy, Demethine, Tridehydrogen,
-        Substituent, NullSubstituent, SubstitutedChemical, XLinkedFunctionalGroup, ChainedChemical, DehydratedChemical, IsotopiclabeledChemical,
-        AbstractLinkageposition, Linkageposition, 
-        parentchemical, leavinggroup, conjugation, includeSIL, getchainlinkage, getchaincomponent, getchainconfig, composition, ischainedchemical, 
-        AChirality, RSChirality, RChirality, SChirality, 
-        NoOpticRotation, UnknownRotation, ClockwiseRotation, CounterclockwiseRotation, 
-        NoDLForm, DLForm, LForm, DForm, 
-        NoEZConfiguration, EZConfiguration, EConfiguration, ZConfiguration 
+import MassSpecChemicals: 
+    chemicalname, chemicalformula, chemicalelements, chemicalabbr, chemicalsmiles, 
+    pushchemicalattr!, defaultchemicalkwargs
+
+export FunctionalGroup, UnknownGroup, UnknownChemical, 
+    LeavingGroup, Dehydrogen, Odehydrogen, Ndehydrogen, Didehydrogen, Odidehydrogen, Ndidehydrogen, Deamine, Dehydroxy, Demethine, Tridehydrogen,
+    Substituent, NullSubstituent, XLinkedFunctionalGroup, 
+    
+    SubstitutedChemical, ChainedChemical, DehydratedChemical,
+    
+    AbstractLinkageposition, Linkageposition, 
+
+    parentchemical, leavinggroup, conjugation,
+    getchainlinkage, getchaincomponent, getchainconfig, composition, ischainedchemical, 
+
+    AChirality, RSChirality, RChirality, SChirality, 
+    NoOpticRotation, UnknownRotation, ClockwiseRotation, CounterclockwiseRotation, 
+    NoDLForm, DLForm, LForm, DForm, 
+    NoEZConfiguration, EZConfiguration, EConfiguration, ZConfiguration 
         
-include("functionalgroup.jl")
+include(joinpath("functionalgroup", "functionalgroup.jl"))
 
 """
     SubstitutedChemical{M <: AbstractChemical, S, T, C} <: AbstractChemical
@@ -34,11 +48,15 @@ Chemical with substituents.
     * `Nothing`: unknown configuration information. 
     * `Vector{UInt8, AbstractConfiguration}`: position configuration pairs. 
 """
-struct SubstitutedChemical{M <: AbstractChemical, S, T, C} <: AbstractChemical
+struct SubstitutedChemical{M <: AbstractChemical, S, T, C} <: AttributedChemical
     chemical::M
     substituted::S
     substituent::T
     config::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end 
 
 """
@@ -55,10 +73,14 @@ Linearly chained chemicals.
     * `Nothing`: unknown configuration information. 
     * `Vector{Union{Nothing, Vector{UInt8, AbstractConfiguration}}}`: position configuration pairs of each element of `chain`. 
 """
-struct ChainedChemical{M, L, C} <: AbstractChemical
+struct ChainedChemical{M, L, C} <: AttributedChemical
     chain::M
     linkage::L
     config::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 """
@@ -74,23 +96,14 @@ Linearly chained chemicals from dehydration reactions.
     * `Nothing`: unknown configuration information. 
     * `Vector{Union{Nothing, Vector{UInt8, AbstractConfiguration}}}`: position configuration pairs of each element of `chain`. 
 """
-struct DehydratedChemical{M, L, C} <: AbstractChemical
+struct DehydratedChemical{M, L, C} <: AttributedChemical
     chain::M
     linkage::L
     config::C
-end
-
-"""
-    IsotopiclabeledChemical{M, I} <: AbstractChemical
-
-Chemical with known isotopic label position. For chemicals with unknown or undefined isotopic label position, please refer to `MassSpecChemicals.Isotopomers`.
-
-* `chemical`: parent chemical (`M`).
-* `isotopiclabel`: isotopic label elements and position (`I`)
-"""
-struct IsotopiclabeledChemical{M, I} <: AbstractChemical
-    chemical::M
-    isotopiclabel::I
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 """
@@ -100,13 +113,15 @@ Parent chemical of undetermined functional group.
 """
 struct UnknownChemical{F <: UnknownGroup} <: AbstractChemical end
 
-include("attr.jl")
+include("base.jl")
+include("msc.jl")
 include("chemicals.jl")
+include("default.jl")
 include("interface.jl")
-include("io.jl")
+# include("io.jl")
 
-include("BasicCompounds.jl")
-include("Metabolites.jl")
+include(joinpath("basic", "basic.jl"))
+include(joinpath("metabolite", "Metabolites.jl"))
 include(joinpath("protein", "Proteins.jl"))
 include(joinpath("glycan", "Glycans.jl"))
 include(joinpath("nucleotide", "Nucleotides.jl"))

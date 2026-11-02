@@ -1,34 +1,214 @@
-function getchemicalattr(dm::DehydratedChemical, ::Val{:elements}; kwargs...)
-    es = [losswaterelements(m, i, i % length(dm)) for (i, m) in enumerate(getchaincomponent(dm))]
-    vcat(es...)
-end
-getchemicalattr(x::XLinkedFunctionalGroup, ::Val{:elements}; kwargs...) = vcat(chemicalelements(x.xlinkage), chemicalelements(x.functionalgroup))
-function getchemicalattr(x::Substituent, ::Val{:elements}; kwargs...) 
-	es = chemicalelements(parentchemical(x))
-	ls = leavinggroupelements(leavinggroup(x))
-	fn_f = length(ls) > 1 ? findlast : findfirst
-	for (e, n) in ls 
-		if n > 0
-			i = fn_f(x -> ==(first(x), e), es)
-			es[i] = e => (last(es[i]) + n)
-		else 
-			while n < 0 
-				i = fn_f(x -> ==(first(x), e), es)
-				es[i] = e => (last(es[i]) - 1)
-				n += 1
-				filter!(x -> last(x) > 0, es)
-			end
-		end
-	end
-	es
-end
-getchemicalattr(x::NullSubstituent, ::Val{:elements}; kwargs...) = Pair{String, Int}[]
-getchemicalattr(x::NullSubstituent, ::Val{:formula}; kwargs...) = ""
 
-# functionalgroup
-getchemicalattr(x::Substituent{<: T, <: Union{Dehydrogen, Odehydrogen, Ndehydrogen}}, ::Val{:SMILES}; kwargs...) where T = getchemicalattr(x.chemical, :SMILES; kwargs...)
-getchemicalattr(x::Substituent{<: T, <: Dehydroxy}, ::Val{:SMILES}; kwargs...) where T = replace(getchemicalattr(x.chemical, :SMILES; kwargs...), r"^O" => "")
-getchemicalattr(x::XLinkedFunctionalGroup, ::Val{:SMILES}; kwargs...) = string("(", getchemicalattr(x.xlinkage, :SMILES; kwargs...), replace(getchemicalattr(x.functionalgroup, :SMILES; kwargs...), r"^\(" => "", r"\)$" => ""), ")")
+chiralitize(::Type{T}, args, kwargs) where {T<:AbstractChemical} = T, args, kwargs
+isotopiclabel(::Type{T}, args, kwargs) where {T<:AbstractChemical} = T, args, (; pairs(defaultchemicalkwargs(T))..., kwargs...)
 
-length(cc::ChainedChemical) = length(getchaincomponent(cc))
-length(cc::DehydratedChemical) = length(getchaincomponent(cc))
+parentchemical(m::AbstractChemical) = m
+parentchemical(fg::Substituent) = parentchemical(fg.chemical)
+parentchemical(sm::SubstitutedChemical) = sm.chemical
+parentchemical(::FunctionalGroup{M}) where M = M()
+parentchemical(x::XLinkedFunctionalGroup) = parentchemical(x.functionalgroup)
+parentchemical(::M) where {M <: UnknownGroup} = UnknownChemical{M}()
+
+leavinggroup(::FunctionalGroup{M, S}) where {M, S} = S()
+function dehydrogengroup(m; position = nothing) 
+    if isnothing(position) || ismissing(position)
+        position = dehydrogenposition(m)
+    end
+    if isnothing(position) || ismissing(position)
+        position = Linkageposition(0x00)
+    elseif position isa Number 
+        position = Linkageposition(position)
+    end
+    Substituent(Dehydrogen, m, position)
+end
+
+function dehydroxygroup(m; position = nothing) 
+    if isnothing(position) || ismissing(position)
+        position = dehydroxyposition(m)
+    end
+    if isnothing(position) || ismissing(position)
+        position = Linkageposition(0x00)
+    elseif position isa Number 
+        position = Linkageposition(position)
+    end
+    Substituent(Dehydroxy, m, position)
+end
+
+conjugation(m::AbstractChemical) = try
+        dehydrogengroup(m) 
+    catch
+        dehydroxygroup(m)
+    end
+
+leavinggroupelements(::Dehydrogen) = ["H" => -1]
+leavinggroupelements(::Odehydrogen) = ["H" => -1]
+leavinggroupelements(::Ndehydrogen) = ["H" => -1]
+leavinggroupelements(::Didehydrogen) = ["H" => -2]
+leavinggroupelements(::Dehydroxy) = ["O" => -1, "H" => -1]
+leavinggroupelements(::Deamine) = ["N" => -1, "H" => -2]
+leavinggroupelements(::Demethine) = ["C" => -1, "H" => -1]
+
+function losswaterelements(m::AbstractChemical, p, q)
+    e = copy(chemicalelements(m))
+    if p != 1 
+        i = findfirst(x -> first(x) == "H", e)
+        e[i] = "H" => (last(e[i]) - 1)
+    end
+    if q != 0
+        i = findlast(x -> first(x) == "O", e)
+        e[i] = "O" => (last(e[i]) - 1)
+        i = findlast(x -> first(x) == "H", e)
+        e[i] = "H" => (last(e[i]) - 1)
+    end
+    filter!(x -> last(x) != 0, e)
+end
+
+dehydrogenposition(a::AbstractChemical) = 0x00
+dehydrogenposition(a::DehydratedChemical) = dehydrogenposition(first(getchaincomponent(a)))
+dehydroxyposition(a::AbstractChemical) = 0x00
+dehydroxyposition(a::DehydratedChemical) = dehydroxyposition(last(getchaincomponent(a)))
+
+dehydrogenfunctionalgroup(a::DehydratedChemical; position = nothing) = dehydrogenfunctionalgroup(first(getchaincomponent(a)))
+dehydrogenfunctionalgroup(a::Substituent) = dehydrogenfunctionalgroup(a.chemical; position = a.position)
+dehydrogenfunctionalgroup(a::FunctionalGroup{M, <: Union{Dehydrogen, Odehydrogen, Ndehydrogen}}) where M = dehydrogenfunctionalgroup(parentchemical(a); position = dehydrogenposition(parentchemical(a)))
+dehydroxyfunctionalgroup(a::DehydratedChemical; position = nothing) = dehydroxyfunctionalgroup(first(getchaincomponent(a)))
+dehydroxyfunctionalgroup(a::Substituent) = dehydroxyfunctionalgroup(a.chemical; position = a.position)
+dehydroxyfunctionalgroup(a::FunctionalGroup{M, Dehydroxy}) where M = dehydroxyfunctionalgroup(parentchemical(a); position = dehydroxyposition(parentchemical(a)))
+
+isnulllinkage(::Type{<: DehydratedChemical}, l) = l == lk(0x00)
+isnulllinkage(::Type{<: DehydratedChemical}, l::Pair) = all(==(lk(0x00)), l)
+isnulllinkage(::Type{<: ChainedChemical}, l) = first(l) == lk(0x00)
+isnulllinkage(::Type{<: ChainedChemical}, l::Pair) = all(x -> ==(first(x), lk(0x00)), l)
+
+makelinkage(::Type{<: ChainedChemical}, a, b) = (lk(dehydroxyposition(a)), Dehydroxy()) => (lk(dehydrogenposition(b)), Dehydrogen())
+makelinkage(::Type{<: DehydratedChemical}, a, b) = lk(dehydroxyposition(a)) => lk(dehydrogenposition(b))
+
+transformlinkage(::Type{<: AbstractChemical}, m::AbstractChemical) = getchainlinkage(m)
+function transformlinkage(::Type{<: DehydratedChemical}, m::ChainedChemical)
+    Tuple(first(first(ls)) => first(last(ls)) for ls in getchainlinkage(m))
+end
+function transformlinkage(::Type{<: ChainedChemical}, m::DehydratedChemical)
+    Tuple((first(ls), Dehydroxy()) => (last(ls), Dehydrogen()) for ls in getchainlinkage(m))
+end
+
+nlinkage(::AbstractFunctionalGroup) = 1
+nlinkage(::FunctionalGroup) = 1
+nlinkage(::FunctionalGroup{T, Didehydrogen}) where T = 2
+nlinkage(::XLinkedFunctionalGroup) = 1
+nbridge(::AbstractFunctionalGroup) = 0
+ntotallinkage(x) = nlinkage(x) + nbridge(x)
+
+composition(m::AbstractChemical) = Dict{AbstractChemical, UInt8}(m => 0x01)
+function composition(m::ChainedChemical) 
+    d = Dict{AbstractChemical, UInt8}()
+    for c in getchaincomponent(m)
+        # iterate composition
+        get!(d, c, 0x00)
+        d[c] += 0x01 
+    end
+    d 
+end
+function composition(m::DehydratedChemical) 
+    d = Dict{AbstractChemical, UInt8}()
+    for c in getchaincomponent(m)
+        # iterate composition
+        get!(d, c, 0x00)
+        d[c] += 0x01 
+    end
+    d 
+end
+
+getchaincomponent(m::AbstractChemical) = (m, )
+getchaincomponent(m::ChainedChemical) = m.chain
+getchaincomponent(m::DehydratedChemical) = m.chain
+
+getchainlinkage(m::AbstractChemical) = ()
+getchainlinkage(m::ChainedChemical) = m.linkage
+getchainlinkage(m::DehydratedChemical) = m.linkage
+
+getchainconfig(m::AbstractChemical) = nothing 
+getchainconfig(m::ChainedChemical) = m.config
+getchainconfig(m::DehydratedChemical) = m.config
+
+ischainedchemical(m::Type{<: AbstractChemical}) = false
+ischainedchemical(m::Type{<: ChainedChemical}) = true
+ischainedchemical(m::Type{<: DehydratedChemical}) = true
+ischainedchemical(m::AbstractChemical) = false
+ischainedchemical(m::ChainedChemical) = true
+ischainedchemical(m::DehydratedChemical) = true
+
+requirelinkage(m::Type{<: AbstractChemical}) = false
+requirelinkage(m::Type{<: ChainedChemical}) = true
+requirelinkage(m::Type{<: DehydratedChemical}) = true
+requireconfig(m::Type{<: AbstractChemical}) = false
+requireconfig(m::Type{<: ChainedChemical}) = true
+requireconfig(m::Type{<: DehydratedChemical}) = true
+
+isdissociated(fg::AbstractChemical) = false
+
+deisomerize(m::AbstractChemical) = m
+deisomerize(m::DehydratedChemical) = DehydratedChemical(map(deisomerize, m), nothing, nothing)
+deisomerize(m::ChainedChemical) = ChainedChemical(map(deisomerize, m), nothing, nothing)
+
+decompose(m::AbstractChemical) = Dict(m => 0x01)
+function decompose(m::DehydratedChemical)
+    del, push = linkage_condense(Dehydroxy)
+    d = Dict{AbstractChemical, UInt8}()
+    for k in del 
+        get!(d, k, 0x00)
+        d[k] += 0x01
+    end
+    p = map(decompose, getchaincomponent(m))
+    prev = nothing
+    for ((i, a), c) in zip(enumerate(getchaincomponent(m)), p)
+        for (k, v) in c 
+            get!(d, k, 0x00)
+            d[k] += v 
+        end
+        if isnothing(m.linkage)
+            del, push = linkage_condense(Dehydroxy)
+        elseif i - 1 > lastindex(m.linkage)
+            del, push = ([], [])
+        elseif isnothing(prev)
+            del, push = linkage_condense(Dehydroxy)
+        else
+            del, push = linkage_condense(Dehydroxy, prev, dehydrogenfunctionalgroup(a; position = first(m.linkage[i - 1])))
+        end
+        for k in del 
+            d[k] -= 0x01
+        end
+        for k in push 
+            get!(d, k, 0x00)
+            d[k] += 0x01
+            # phsophoric
+        end
+        if isnothing(m.linkage) || i > lastindex(m.linkage)
+            prev = nothing
+        else
+            prev = dehydroxyfunctionalgroup(a; position = first(m.linkage[i]))
+        end
+    end
+    d
+end
+
+function decompose(fg::Substituent{M, S}) where {M ,S}
+    d = decompose(fg.chemical)
+    del, push = linkage_condense(S, fg.chemical; position = fg.position)
+    for k in del 
+        d[k] -= 0x01
+    end
+    for k in push 
+        d[k] += 0x01
+    end
+    d
+end
+function decompose(fg::XLinkedFunctionalGroup)
+    d = decompose(fg.functionalgroup)
+    get!(d, fg.xlinkage, 0x00)
+    d[fg.xlinkage] += 0x01
+    d
+end
+
+linkage_condense(::Type{LeavingGroup}, prev::AbstractFunctionalGroup, curr::AbstractFunctionalGroup) = ([], [])
+linkage_condense(::Type{LeavingGroup}, m::AbstractChemical; position = nothing) = ([], [])
+linkage_condense(::Type{LeavingGroup}) = ([], [])

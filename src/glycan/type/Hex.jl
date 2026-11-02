@@ -5,9 +5,15 @@ Hexose.
 """
 struct Hexose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Hexose(s::T; LFP = PyranoseForm, DL = DLForm) where T = Hexose{DL, LFP, T}(s)
-Hexose(; LFP = PyranoseForm, DL = DLForm) = Hexose{DL, LFP, Nothing}(nothing)
+Hexose(substituent = nothing; LFP = PyranoseForm, DL = DLForm, kwargs...) =
+    Hexose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Hexose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Hexose{D, P, T}, substituent; kwargs...)
 """
     Glucose{D, P, T} <: AbstractHexose{D, P, T}
 
@@ -15,79 +21,127 @@ Glucose.
 """
 struct Glucose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Glucose(s::T; LFP = PyranoseForm, DL = DForm) where T = Glucose{DL, LFP, T}(s)
-Glucose(; LFP = PyranoseForm, DL = DForm) = Glucose{DL, LFP, Nothing}(nothing)
+Glucose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Glucose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Glucose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Glucose{D, P, T}, substituent; kwargs...)
 """
     Mannose{D, P, T} <: AbstractHexose{D, P, T}
 
 Mannose.
 """
-struct Mannose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Mannose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Mannose(s::T; LFP = PyranoseForm, DL = DForm) where T = Mannose{DL, LFP, T}(s)
-Mannose(; LFP = PyranoseForm, DL = DForm) = Mannose{DL, LFP, Nothing}(nothing)
+Mannose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Mannose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Mannose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Mannose{D, P, T}, substituent; kwargs...)
 """
     Galactose{D, P, T} <: AbstractHexose{D, P, T}
 
 Galactose.
 """
-struct Galactose{D, P, T} <: AbstractHexose{D, P, T} 
+struct Galactose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Galactose(s::T; LFP = PyranoseForm, DL = DForm) where T = Galactose{DL, LFP, T}(s)
-Galactose(; LFP = PyranoseForm, DL = DForm) = Galactose{DL, LFP, Nothing}(nothing)
+Galactose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Galactose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Galactose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Galactose{D, P, T}, substituent; kwargs...)
 """
     Gulose{D, P, T} <: AbstractHexose{D, P, T}
 
 Gulose.
 """
-struct Gulose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Gulose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Gulose(s::T; LFP = PyranoseForm, DL = DForm) where T = Gulose{DL, LFP, T}(s)
-Gulose(; LFP = PyranoseForm, DL = DForm) = Gulose{DL, LFP, Nothing}(nothing)
+Gulose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Gulose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Gulose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Gulose{D, P, T}, substituent; kwargs...)
 """
     Altose{D, P, T} <: AbstractHexose{D, P, T}
 
 Altose.
 """
-struct Altose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Altose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Altose(s::T; LFP = PyranoseForm, DL = LForm) where T = Altose{DL, LFP, T}(s)
-Altose(; LFP = PyranoseForm, DL = LForm) = Altose{DL, LFP, Nothing}(nothing)
+Altose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Altose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Altose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Altose{D, P, T}, substituent; kwargs...)
 """
     Allose{D, P, T} <: AbstractHexose{D, P, T}
 
 Allose.
 """
-struct Allose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Allose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Allose(s::T; LFP = PyranoseForm, DL = DForm) where T = Allose{DL, LFP, T}(s)
-Allose(; LFP = PyranoseForm, DL = DForm) = Allose{DL, LFP, Nothing}(nothing)
+Allose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Allose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Allose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Allose{D, P, T}, substituent; kwargs...)
 """
     Talose{D, P, T} <: AbstractHexose{D, P, T}
 
 Talose.
 """
-struct Talose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Talose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Talose(s::T; LFP = PyranoseForm, DL = DForm) where T = Talose{DL, LFP, T}(s)
-Talose(; LFP = PyranoseForm, DL = DForm) = Talose{DL, LFP, Nothing}(nothing)
+Talose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Talose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Talose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Talose{D, P, T}, substituent; kwargs...)
 """
     Idose{D, P, T} <: AbstractHexose{D, P, T}
 
 Idose.
 """
-struct Idose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Idose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Idose(s::T; LFP = PyranoseForm, DL = LForm) where T = Idose{DL, LFP, T}(s)
-Idose(; LFP = PyranoseForm, DL = LForm) = Idose{DL, LFP, Nothing}(nothing)
+Idose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Idose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Idose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Idose{D, P, T}, substituent; kwargs...)
 
 # 3-MethylMethyl : Api, Fru, Tag, Sor, Psi
 """
@@ -95,48 +149,78 @@ Idose(; LFP = PyranoseForm, DL = LForm) = Idose{DL, LFP, Nothing}(nothing)
 
 Apiose.
 """
-struct Apiose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Apiose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Apiose(s::T; LFP = FuranoseForm, DL = LForm) where T = Apiose{DL, LFP, T}(s)
-Apiose(; LFP = FuranoseForm, DL = LForm) = Apiose{DL, LFP, Nothing}(nothing)
+Apiose(substituent = nothing; LFP = FuranoseForm, DL = LForm, kwargs...) =
+    Apiose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Apiose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Apiose{D, P, T}, substituent; kwargs...)
 """
     Fructose{D, P, T} <: AbstractHexose{D, P, T}
 
 Fructose.
 """
-struct Fructose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Fructose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Fructose(s::T; LFP = PyranoseForm, DL = LForm) where T = Fructose{DL, LFP, T}(s)
-Fructose(; LFP = PyranoseForm, DL = LForm) = Fructose{DL, LFP, Nothing}(nothing)
+Fructose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Fructose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Fructose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Fructose{D, P, T}, substituent; kwargs...)
 """
     Tagatose{D, P, T} <: AbstractHexose{D, P, T}
 
 Tagatose.
 """
-struct Tagatose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Tagatose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Tagatose(s::T; LFP = PyranoseForm, DL = DForm) where T = Tagatose{DL, LFP, T}(s)
-Tagatose(; LFP = PyranoseForm, DL = DForm) = Tagatose{DL, LFP, Nothing}(nothing)
+Tagatose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Tagatose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Tagatose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Tagatose{D, P, T}, substituent; kwargs...)
 """
     Sorbose{D, P, T} <: AbstractHexose{D, P, T}
 
 Sorbose.
 """
-struct Sorbose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Sorbose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Sorbose(s::T; LFP = PyranoseForm, DL = LForm) where T = Sorbose{DL, LFP, T}(s)
-Sorbose(; LFP = PyranoseForm, DL = LForm) = Sorbose{DL, LFP, Nothing}(nothing)
+Sorbose(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Sorbose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Sorbose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Sorbose{D, P, T}, substituent; kwargs...)
 """
     Psicose{D, P, T} <: AbstractHexose{D, P, T}
 
 Psicose.
 """
-struct Psicose{D, P, T} <: AbstractHexose{D, P, T}    
+struct Psicose{D, P, T} <: AbstractHexose{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Psicose(s::T; LFP = PyranoseForm, DL = DForm) where T = Psicose{DL, LFP, T}(s)
-Psicose(; LFP = PyranoseForm, DL = DForm) = Psicose{DL, LFP, Nothing}(nothing)
+Psicose(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Psicose{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Psicose{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Psicose{D, P, T}, substituent; kwargs...)

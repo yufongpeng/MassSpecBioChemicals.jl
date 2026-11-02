@@ -154,3 +154,13 @@ struct XLinkedFunctionalGroup{M, L} <: AbstractFunctionalGroup
 end
 # isdissociated check adjacent C=O
 struct NullSubstituent <: FunctionalGroup{Nothing, Nothing} end 
+
+mutable struct IsotopicLabel
+    isotopiclabel
+end
+
+IsotopicLabel(label::IsotopicLabel) = label
+IsotopicLabel() = IsotopicLabel(nothing)
+
+include("msc.jl")
+include("io.jl")

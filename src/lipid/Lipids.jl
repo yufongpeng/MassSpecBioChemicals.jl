@@ -1,13 +1,48 @@
 module Lipids
 using Reexport, IterTools, MLStyle, Dates, Downloads, ZipArchives
 using ..MassSpecBioChemicals
-using MassSpecChemicals: AbstractChemical, tuplize, vectorize
-@reexport using ..MassSpecBioChemicals.BasicCompounds, ..MassSpecBioChemicals.Metabolites, ..MassSpecBioChemicals.Proteins, ..MassSpecBioChemicals.Glycans
-import ..MassSpecBioChemicals: parentchemical, leavinggroup, conjugation, repr_linkage, dehydroxyposition, dehydrogenposition, AbstractConfiguration
-import MassSpecChemicals: parse_chemical, getchemicalattr
+using MassSpecChemicals: 
+AbstractChemical, ChemicalAttribute, AbstractChemicalParser, 
+    tuplize, vectorize, buildattribute
+import MassSpecChemicals: 
+    chemicalname, chemicalformula, chemicalelements, chemicalabbr, chemicalsmiles, 
+    defaultchemicalkwargs, parse_chemical
+
+@reexport using ..MassSpecBioChemicals.Metabolites, ..MassSpecBioChemicals.Proteins, ..MassSpecBioChemicals.Glycans
+import ..MassSpecBioChemicals: 
+        parentchemical, 
+        leavinggroup, 
+        conjugation, 
+        repr_linkage, 
+        dehydroxyposition, 
+        dehydrogenposition, 
+        AbstractConfiguration,
+        deisomerize, 
+        composition,
+        chiralitize
+
 import Base: isless, getindex, length, size, eltype, getproperty, propertynames, setproperty!, keys, values, pairs
-using ..MassSpecBioChemicals: lk, makechemical, makelinkage, concatchemical, deletechemicalat, AbstractFunctionalGroup, UnknownGroup, dehydrogenposition, dehydroxyposition, RSSystem, GeometricConfiguration, dehydroxygroup, dehydrogengroup, chiralchemical, isdissociated, nlinkage, ntotallinkage, deisomerize, composition
-using ..MassSpecBioChemicals.Glycans: ap, α, β, parse_monosaccharide, parse_glycomp, parse_series_glycan, MONO_STRUCT, GLYCAN_STRUCT, generic_glycan
+using ..MassSpecBioChemicals: 
+        lk, makechemical, 
+        makelinkage, 
+        concatchemical, 
+        deletechemicalat, 
+        AbstractFunctionalGroup, 
+        UnknownGroup, 
+        dehydrogenposition, 
+        dehydroxyposition, 
+        RSSystem, 
+        GeometricConfiguration, 
+        dehydroxygroup, 
+        dehydrogengroup, 
+        chiralchemical, 
+        isdissociated, 
+        nlinkage, 
+        ntotallinkage
+
+using ..MassSpecBioChemicals.Glycans: 
+        ap, α, β, parse_monosaccharide, parse_glycomp, parse_series_glycan, 
+        MONO_STRUCT, GLYCAN_STRUCT, generic_glycan
 using ..MassSpecBioChemicals.Proteins: parse_aa, parse_aa_fg, parse_aa3, letter3_abbr, PROTEIN_3LETTER_AA
 export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, SPB, AbstractSTRing, STRing, SRing, DSMSRing, DCRing, CASRing, BRSRing, EGSRing, DEGSRing, SISRing, STSRing,
         Lipid, 
@@ -44,11 +79,10 @@ export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, 
 
 include("utils.jl")
 
-abstract type AbstractLipid <: AbstractChemical end
-struct LipidChemical <: AbstractLipid
+abstract type Lipid{B, C} <: AttributedChemical end
+struct LipidChemical <: Lipid{Nothing, Nothing}
     chemical::Chemical
 end
-abstract type Lipid{B, C} <: AbstractLipid end
 
 abstract type AbstractCarbonChain <: FunctionalGroup{Nothing, Nothing} end
 struct CarbonChain{T, D, S, C, I} <: AbstractCarbonChain
@@ -57,14 +91,8 @@ struct CarbonChain{T, D, S, C, I} <: AbstractCarbonChain
     substituent::S
     chirality::C
     isotopiclabel::I
-end
-function CarbonChain{T}(carbon::UInt8, 
-        doublebond::D, 
-        substituent::S, 
-        chirality::C,
-        isotopiclabel::I = nothing
-    ) where {D <: Union{UInt8, <: Vector}, S <: Union{Nothing, <: Vector}, C <: Union{Nothing, <: Vector}, I, T}
-    CarbonChain{T, D, S, C, I}(carbon, doublebond, substituent, chirality, isotopiclabel)
+    name::String
+    elements::Vector{Pair{String, Int}}
 end
 struct CycloChain{D, S, C} <: AbstractCarbonChain
     position::Vector{Pair{UInt8, UInt8}}
@@ -72,6 +100,8 @@ struct CycloChain{D, S, C} <: AbstractCarbonChain
     doublebond::D
     substituent::S
     chirality::C
+    name::String
+    elements::Vector{Pair{String, Int}}
 end
 
 # V1
@@ -96,6 +126,8 @@ end
 
 struct IsoprenoidChain{N, I <: Union{Nothing, String}} <: AbstractCarbonChain
     isotopiclabel::I
+    name::String
+    elements::Vector{Pair{String, Int}}
 end
 
 abstract type CarbonChainType end
@@ -149,27 +181,36 @@ abstract type FattyAcyl{B, C} <: Lipid{B, C} end
 struct MonoFattyAcyl{B, C} <: FattyAcyl{B, C}
     backbone::B
     chain::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 struct NacylAmine{B, C} <: FattyAcyl{B, C}
     backbone::B
     chain::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 # NAE, NAGly, NASer, NAT...
 struct FattyAcylEster{B <: MonoFattyAcyl, C} <: FattyAcyl{B, C}
     backbone::B
     chain::C
     position::UInt8
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
-const Hydrocarbon{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(Dihydrogen), C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}}
-const FattyAcid{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(HydrogenOxide), C <: CarbonChain{Acyl}}
-const FattyAldehyde{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(Dihydrogen), C <: CarbonChain{Acyl}} # FAL
-const FattyAlcohol{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(HydrogenOxide), C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}} # FOH
-const FattyAmide{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(Ammonia), C <: CarbonChain{Acyl}}
-const FattyAmine{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(Ammonia), C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}}
-const FattyAcylCarnitine{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(Carnitine), C <: CarbonChain{Acyl}}  
-const FattyAcylCoA{B, C} = MonoFattyAcyl{B, C} where {B <: includeSIL(CoA), C <: CarbonChain{Acyl}}
+const Hydrocarbon{B, C} = MonoFattyAcyl{B, C} where {B <: Dihydrogen, C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}}
+const FattyAcid{B, C} = MonoFattyAcyl{B, C} where {B <: HydrogenOxide, C <: CarbonChain{Acyl}}
+const FattyAldehyde{B, C} = MonoFattyAcyl{B, C} where {B <: Dihydrogen, C <: CarbonChain{Acyl}} # FAL
+const FattyAlcohol{B, C} = MonoFattyAcyl{B, C} where {B <: HydrogenOxide, C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}} # FOH
+const FattyAmide{B, C} = MonoFattyAcyl{B, C} where {B <: Ammonia, C <: CarbonChain{Acyl}}
+const FattyAmine{B, C} = MonoFattyAcyl{B, C} where {B <: Ammonia, C <: Union{<: CarbonChain{Alkyl}, <: CarbonChain{Alkenyl}}}
+const FattyAcylCarnitine{B, C} = MonoFattyAcyl{B, C} where {B <: Carnitine, C <: CarbonChain{Acyl}}  
+const FattyAcylCoA{B, C} = MonoFattyAcyl{B, C} where {B <: CoA, C <: CarbonChain{Acyl}}
 const WaxEster{B, C} = FattyAcylEster{B, C} where {B <: FattyAlcohol, C <: AlkylAcylChain}
 const NacylAlkylAmine{B, C} = NacylAmine{B, C} where {B <: FattyAmine, C <: AlkylAcylChain}
 const FattyAcylEstolid{B, C} = FattyAcylEster{B, C} where {B <: FattyAcid, C <: Acyl2Chain}
@@ -187,25 +228,34 @@ const TetraradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Rad
                             <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}}}
 
 abstract type Glycerolipid{B, C} <: Lipid{B, C} end
-struct Monoradylglycerol{B <: includeSIL(Glycerol), C <: MonoradylChain} <: Glycerolipid{B, C}
+struct Monoradylglycerol{B <: Glycerol, C <: MonoradylChain} <: Glycerolipid{B, C}
     backbone::B
     chain::C
     sn::UInt8
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end # MG [0] [1] [2] [3]
-struct Diradylglycerol{B <: includeSIL(Glycerol), C <: DiradylChain} <: Glycerolipid{B, C}
+struct Diradylglycerol{B <: Glycerol, C <: DiradylChain} <: Glycerolipid{B, C}
     backbone::B
     chain::C
     sn::UInt8
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end # DG [0] [0, 0] [1, 0] [1, 2] [2, 3] [1, 3]
-struct Triradylglycerol{B <: includeSIL(Glycerol), C <: TriradylChain} <: Glycerolipid{B, C}
+struct Triradylglycerol{B <: Glycerol, C <: TriradylChain} <: Glycerolipid{B, C}
     backbone::B
     chain::C
     sn::UInt8
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end # TG [0] [0, 0] [0, 0, 0] [1/2/3, 0] [1/3, 0, 0] [1, 2, 3] # divrem 16 divrem 4
-# struct Estolide{B <: includeSIL(Glycerol), C <: TriradylChain} <: Glycerolipid{B, C}
+# struct Estolide{B <: Glycerol, C <: TriradylChain} <: Glycerolipid{B, C}
 #     backbone::B
 #     chain::C
 #     sn::UInt8
@@ -215,35 +265,44 @@ struct Omodifiedradylglycerol{B <: DehydratedChemical, C <: MonoDiradylChain} <:
     chain::C
     sn::UInt8
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end # DehydratedChemical((Glycerol(), ?), [[Odehydrogen(), ?], [1, ?]]) # Omodeified @1 # chiral sn-2
 const Omodifiedmonoradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B, C <: MonoradylChain}
 const Omodifieddiradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B, C <: DiradylChain}
-# const Sulfoquinovosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C}
-# const Sulfoquinovosylmonoradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-# const Sulfoquinovosyldiradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Sulfoquinovose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-# const Monogalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C}
-# const Monogalactosylmonoradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-# const Monogalactosyldiradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-# const Digalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C}
-# const Digalactosylmonoradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-# const Digalactosyldiradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(Galactose), <: includeSIL(Galactose), <: includeSIL(Glycerol)}}, C <: DiradylChain}
-# const Glucuronosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C}
-# const Glucuronosylmonoradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-# const Glucuronosyldiradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: includeSIL(GlucuronicAcid), <: includeSIL(Glycerol)}}, C <: DiradylChain}
+# const Sulfoquinovosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Sulfoquinovose, <: Glycerol}}, C}
+# const Sulfoquinovosylmonoradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Sulfoquinovose, <: Glycerol}}, C <: MonoradylChain}
+# const Sulfoquinovosyldiradylglycerol{B, C} = Sulfoquinovosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Sulfoquinovose, <: Glycerol}}, C <: DiradylChain}
+# const Monogalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Glycerol}}, C}
+# const Monogalactosylmonoradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Glycerol}}, C <: MonoradylChain}
+# const Monogalactosyldiradylglycerol{B, C} = Monogalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Glycerol}}, C <: DiradylChain}
+# const Digalactosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Galactose, <: Glycerol}}, C}
+# const Digalactosylmonoradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Galactose, <: Glycerol}}, C <: MonoradylChain}
+# const Digalactosyldiradylglycerol{B, C} = Digalactosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: Galactose, <: Galactose, <: Glycerol}}, C <: DiradylChain}
+# const Glucuronosylradylglycerol{B, C} = Omodifiedradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: GlucuronicAcid, <: Glycerol}}, C}
+# const Glucuronosylmonoradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: GlucuronicAcid, <: Glycerol}}, C <: MonoradylChain}
+# const Glucuronosyldiradylglycerol{B, C} = Glucuronosylradylglycerol{B, C} where {B <: DehydratedChemical{<: Tuple{<: GlucuronicAcid, <: Glycerol}}, C <: DiradylChain}
 
 # Internal use multiple glycerol 
-struct Radyldiglycerol{B <: DehydratedChemical{<: Tuple{<: includeSIL(Glycerol), <: includeSIL(Glycerol)}}, C} <: Glycerolipid{B, C}
+struct Radyldiglycerol{B <: DehydratedChemical{<: Tuple{<: Glycerol, <: Glycerol}}, C} <: Glycerolipid{B, C}
     backbone::B
     chain::C
     sn::UInt16
     chirality::Tuple{RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
-struct Radyltriglycerol{B <: DehydratedChemical{<: Tuple{<: includeSIL(Glycerol), <: includeSIL(Glycerol), <: includeSIL(Glycerol)}}, C} <: Glycerolipid{B, C}
+struct Radyltriglycerol{B <: DehydratedChemical{<: Tuple{<: Glycerol, <: Glycerol, <: Glycerol}}, C} <: Glycerolipid{B, C}
     backbone::B
     chain::C
     sn::UInt16
     chirality::Tuple{RSSystem, RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 abstract type Glycerophospholipid{B, C} <: Lipid{B, C} end # PX [0] [0, 0] [1, 2], LPX [0] [1/2] # chiral sn-2
@@ -252,16 +311,19 @@ struct Radylglycerophosphate{B <: DehydratedChemical, C} <: Glycerophospholipid{
     chain::C
     sn::UInt8
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
-const PPA = includeSIL(PhosphoricAcid)
-glycerophospho(T) = DehydratedChemical{<: Tuple{<: Union{<: T, <: IsotopiclabeledChemical{<: T}}, <: PPA, <: includeSIL(Glycerol)}}
-glycerophospho(T, S) = DehydratedChemical{<: Tuple{<: Union{<: T, <: IsotopiclabeledChemical{<: T}}, <: Union{<: S, <: IsotopiclabeledChemical{<: S}}, <: PPA, <: includeSIL(Glycerol)}}
-glycerophosphophosphate(T) = DehydratedChemical{<: Tuple{<: PPA, <: Union{<: T, <: IsotopiclabeledChemical{<: T}}, <: PPA, <: includeSIL(Glycerol)}}
+const PPA = PhosphoricAcid
+glycerophospho(T) = DehydratedChemical{<: Tuple{<: T, <: PPA, <: Glycerol}}
+glycerophospho(T, S) = DehydratedChemical{<: Tuple{<: T, <: S, <: PPA, <: Glycerol}}
+glycerophosphophosphate(T) = DehydratedChemical{<: Tuple{<: PPA, <: T, <: PPA, <: Glycerol}}
 const Monoradylglycerophosphate{B, C} = Radylglycerophosphate{B, C} where {B, C <: HeadMonoradylChain}
 const Diradylglycerophosphate{B, C} = Radylglycerophosphate{B, C} where {B, C <: HeadDiradylChain}
-const Lysophosphatidicacid{B, C} = Monoradylglycerophosphate{B, C} where {B <: DehydratedChemical{<: Tuple{<: PPA, <: includeSIL(Glycerol)}}, C <: MonoradylChain}
-const Phosphatidicacid{B, C} = Diradylglycerophosphate{B, C} where {B <: DehydratedChemical{<: Tuple{<: PPA, <: includeSIL(Glycerol)}}, C <: DiradylChain}
+const Lysophosphatidicacid{B, C} = Monoradylglycerophosphate{B, C} where {B <: DehydratedChemical{<: Tuple{<: PPA, <: Glycerol}}, C <: MonoradylChain}
+const Phosphatidicacid{B, C} = Diradylglycerophosphate{B, C} where {B <: DehydratedChemical{<: Tuple{<: PPA, <: Glycerol}}, C <: DiradylChain}
 const Lysophosphatidylcholine{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophospho(Choline), C <: MonoradylChain}
 const Phosphatidylcholine{B, C} = Diradylglycerophosphate{B, C} where {B <: glycerophospho(Choline), C <: DiradylChain}
 const Lysophosphatidylethanolamine{B, C} = Monoradylglycerophosphate{B, C} where {B <: glycerophospho(Ethanolamine), C <: MonoradylChain}
@@ -284,6 +346,9 @@ struct Radylglycerophosphoaminoacid{B, C} <: Glycerophospholipid{B, C}
     chain::C
     sn::UInt8
     chirality::Tuple{RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 const Lysophosphatidylserine{B, C} = Radylglycerophosphoaminoacid{B, C} where {B <: glycerophospho(Serine), C <: MonoradylChain}
@@ -296,6 +361,9 @@ struct Radylglycerophosphoglycerol{B <: Union{<: glycerophospho(Glycerol), <: gl
     chain::C
     sn::UInt8
     chirality::Tuple{RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 
 const Lysophosphatidylglycerol{B, C} = Radylglycerophosphoglycerol{B, C} where {B <: glycerophospho(Glycerol), C <: MonoradylChain}
@@ -303,11 +371,14 @@ const Phosphatidylglycerol{B, C} = Radylglycerophosphoglycerol{B, C} where {B <:
 const Lysophosphatidylglycerolphosphate{B, C} = Radylglycerophosphoglycerol{B, C} where {B <: glycerophosphophosphate(Glycerol), C <: MonoradylChain}
 const Phosphatidylglycerolphosphate{B, C} = Radylglycerophosphoglycerol{B, C} where {B <: glycerophosphophosphate(Glycerol), C <: DiradylChain}
 
-struct Bisradylglycerophosphate{B <: DehydratedChemical{<: Tuple{<: includeSIL(Glycerol), <: PPA, <: includeSIL(Glycerol)}}, C} <: Glycerophospholipid{B, C}
+struct Bisradylglycerophosphate{B <: DehydratedChemical{<: Tuple{<: Glycerol, <: PPA, <: Glycerol}}, C} <: Glycerophospholipid{B, C}
     backbone::B
     chain::C
     sn::UInt16
     chirality::Tuple{RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 const Bisphosphatidicacid{B, C} = Bisradylglycerophosphate{B, C} where {B, C <: TetraradylChain}
 # BPA [0] [0, 0] [0, 0, 0] [0, 0, 0, 0] [1/2, 0] [1, PXP, 3] [1, PXP, 3, 3] [1, PXP, 4, 3] [1, 1, PXP, 3, 3] [1, 1, PXP, 4, 3] [1, 2, PXP, 4, 3]
@@ -316,11 +387,14 @@ const Semilysobisphosphatidicacid{B, C} = Bisradylglycerophosphate{B, C} where {
 const Lysobisphosphatidicacid{B, C} = Bisradylglycerophosphate{B, C} where {B, C <: DiradylChain} 
 # BMP/LBPA [0] [0, 0] [1/2, P, 0] [0, P, 1/2] [1/2, P, 1/2]
 
-struct Bisradylglycerophosphoglycerol{B <: DehydratedChemical{<: Tuple{<: includeSIL(Glycerol), <: PPA, <: includeSIL(Glycerol), <: PPA, <: includeSIL(Glycerol)}}, C} <: Glycerophospholipid{B, C}
+struct Bisradylglycerophosphoglycerol{B <: DehydratedChemical{<: Tuple{<: Glycerol, <: PPA, <: Glycerol, <: PPA, <: Glycerol}}, C} <: Glycerophospholipid{B, C}
     backbone::B
     chain::C
     sn::UInt16
     chirality::Tuple{RSSystem, RSSystem, RSSystem}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end 
 const Cardiolipin{B, C} = Bisradylglycerophosphoglycerol{B, C} where {B, C <: TetraradylChain}
 # CL [0] [0, 0] [0, 0, 0] [0, 0, 0, 0] [1/2, 0] [1, PXP, 3] [1, PXP, 3, 3] [1, PXP, 4, 3] [1, 1, PXP, 3, 3] [1, 1, PXP, 4, 3] [1, 2, PXP, 4, 3]
@@ -333,6 +407,9 @@ struct GlycerophosphoNacylethanolamine{B <: glycerophospho(Ethanolamine), C <: C
     backbone::B
     chain::C
     chirality::RSSystem
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end # GP-NAE
 # PnC, PnE, PPA
 # SMGDG, CDPDAG
@@ -346,6 +423,9 @@ struct SphingoBone{H, C <: Union{<: CarbonChain{<: AbstractSPB}, <: SUM_SL}} <: 
     chain::C
     position::UInt8
     chirality::Union{RSSystem, Tuple{RSSystem, RSSystem}}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 # HexCer/IPC/SM... headgroup position, chiral except 1
 # CerP/SPBP.. headgroup position < 32, divrem(x, 32) 35 => [1, 3]
@@ -359,6 +439,9 @@ struct MixSphingoBone{H, C <: Union{<: CarbonChain{<: AbstractSPB}, <: SUM_SL}} 
     chain::C
     position::Vector{UInt8}
     chirality::Union{Vector{RSSystem}, Vector{Any}}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 # > 1 head group, chiral except 1
 # pos = (hg1, ..., hg2)
@@ -374,54 +457,70 @@ const SphingoidBase{C} = SphingoidBaseBone{Nothing, C} where {C <: CarbonChain{S
 const Glycosylceramide{H, C} = CeramideBone{H, C} where {H <: AbstractGlycan, C <: SUM_CER}
 const Glycosylsphingoidbase{H, C} = SphingoidBaseBone{H, C} where {H <: AbstractGlycan, C <: CarbonChain{SPB}}
 
-const Hexlike = includeSIL(Glycan{<: Tuple{<: AbstractHexose}})
+const Hexlike = Glycan{<: Tuple{<: AbstractHexose}}
 
 const CeramidePhosphate{H, C} = CeramideBone{H, C} where {H <: PPA, C <: SUM_CER}
 const SphingoidBasePhosphate{H, C} = SphingoidBaseBone{H, C} where {H <: PPA, C <: CarbonChain{SPB}}
-const Inositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
-const Lysoinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
-const Ethanolaminephosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ethanolamine), <: PPA}}, C <: SUM_CER}
-const Lysoethanolaminephosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Ethanolamine), <: PPA}}, C <: CarbonChain{SPB}}
-const Mannosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
-const Lysomannosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
-const Mannosyldiinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA, <: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
-const Lysomannosyldiinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Inositol), <: PPA, <: includeSIL(Mannose), <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
-const Glycosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Inositol), <: PPA}}, C <: SUM_CER}
-const Lysoglycosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: includeSIL(Inositol), <: PPA}}, C <: CarbonChain{SPB}}
-const Sphingomyelin{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Choline), <: PPA}}, C <: SUM_CER}
-const Lysosphingomyelin{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: includeSIL(Choline), <: PPA}}, C <: CarbonChain{SPB}}
+const Inositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Inositol, <: PPA}}, C <: SUM_CER}
+const Lysoinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Inositol, <: PPA}}, C <: CarbonChain{SPB}}
+const Ethanolaminephosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Ethanolamine, <: PPA}}, C <: SUM_CER}
+const Lysoethanolaminephosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Ethanolamine, <: PPA}}, C <: CarbonChain{SPB}}
+const Mannosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Mannose, <: Inositol, <: PPA}}, C <: SUM_CER}
+const Lysomannosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Mannose, <: Inositol, <: PPA}}, C <: CarbonChain{SPB}}
+const Mannosyldiinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Inositol, <: PPA, <: Mannose, <: Inositol, <: PPA}}, C <: SUM_CER}
+const Lysomannosyldiinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Inositol, <: PPA, <: Mannose, <: Inositol, <: PPA}}, C <: CarbonChain{SPB}}
+const Glycosylinositolphosphorylceramide{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: Inositol, <: PPA}}, C <: SUM_CER}
+const Lysoglycosylinositolphosphorylceramide{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: AbstractGlycan, <: Inositol, <: PPA}}, C <: CarbonChain{SPB}}
+const Sphingomyelin{H, C} = CeramideBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Choline, <: PPA}}, C <: SUM_CER}
+const Lysosphingomyelin{H, C} = SphingoidBaseBone{H, C} where {H <: DehydratedChemical{<: Tuple{<: Choline, <: PPA}}, C <: CarbonChain{SPB}}
 
 const Sulfonolipid{C} = SphingoBone{Nothing, C} where {C <: Union{<: CarbonChain{<: Tuple{SulfoSPB, Acyl}}, <: Tuple{<: CarbonChain{SulfoSPB}, <: CarbonChain{Acyl}}}}
 const Lysosulfonolipid{C} = SphingoBone{Nothing, C} where {C <: CarbonChain{SulfoSPB}}
 
 const Acylceramide{H, C} = SphingoBone{H, C} where {H <: FattyAcid, C <: SUM_CER}
 # const Acylhexosylceramide{H, C} = MixSphingoBone{H, C} where {H <: Tuple{<: FattyAcid, <: Hexlike}, C <: SUM_CER}
-const Acylsphingomyelin{H, C} = MixSphingoBone{H, C} where {H <: Tuple{<: FattyAcid, DehydratedChemical{<: Tuple{<: includeSIL(Choline), <: PPA}}}, C <: SUM_CER}
+const Acylsphingomyelin{H, C} = MixSphingoBone{H, C} where {H <: Tuple{<: FattyAcid, DehydratedChemical{<: Tuple{<: Choline, <: PPA}}}, C <: SUM_CER}
 
 abstract type Sterol{C} <: Lipid{Nothing, C} end
 struct SterolBone{C} <: Sterol{C}
     chain::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 const FreeSterol{C} = SterolBone{C} where {C <: CarbonChain{<: AbstractSTRing}}
 const Sterylester{C} = SterolBone{C} where {C <: Tuple{<: CarbonChain{<: AbstractSTRing}, <: CarbonChain{Acyl}}}
 
 struct SubstitutedSterol{C, S, T} <: Sterol{C}
     backbone::SubstitutedChemical{FreeSterol{C}, S, T}
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
 # ST;..., BA;..., SG, ASG
 
 abstract type Prenol{C} <: Lipid{Nothing, C} end
 struct Retinylester{C <: CarbonChain{<: Acyl}} <: Prenol{C}
     chain::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-struct CoenzymeQ{C <: IsoprenoidChain} <: Prenol{C} end
+struct CoenzymeQ{C <: IsoprenoidChain} <: Prenol{C}
+    chain::C
+    name::String
+    elements::Vector{Pair{String, Int}}
+    attribute::Union{Nothing, ChemicalAttribute}
+end
 
+include("msc.jl")
 include("database.jl")
 include("interface.jl")
 include("annotationlevel.jl")
 include("transform.jl")
+include("base.jl")
 include(joinpath("input", "input.jl"))
-include("const.jl")
+include(joinpath("construct", "construct.jl"))
 include(joinpath("output", "output.jl"))
  
 end

@@ -5,9 +5,15 @@ N-acetylhexosamine.
 """
 struct Nacetylhexosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylhexosamine(s::T; LFP = PyranoseForm, DL = DLForm) where T = Nacetylhexosamine{DL, LFP, T}(s)
-Nacetylhexosamine(; LFP = PyranoseForm, DL = DLForm) = Nacetylhexosamine{DL, LFP, Nothing}(nothing)
+Nacetylhexosamine(substituent = nothing; LFP = PyranoseForm, DL = DLForm, kwargs...) =
+    Nacetylhexosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylhexosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylhexosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylglucosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
@@ -15,76 +21,124 @@ N-acetylglucosamine.
 """
 struct Nacetylglucosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylglucosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetylglucosamine{DL, LFP, T}(s)
-Nacetylglucosamine(; LFP = PyranoseForm, DL = DForm) = Nacetylglucosamine{DL, LFP, Nothing}(nothing)
+Nacetylglucosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetylglucosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylglucosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylglucosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylmannosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylmannosamine.
 """
-struct Nacetylmannosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylmannosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylmannosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetylmannosamine{DL, LFP, T}(s)
-Nacetylmannosamine(; LFP = PyranoseForm, DL = DForm) = Nacetylmannosamine{DL, LFP, Nothing}(nothing)
+Nacetylmannosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetylmannosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylmannosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylmannosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylgalactosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylgalactosamine.
 """
-struct Nacetylgalactosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylgalactosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylgalactosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetylgalactosamine{DL, LFP, T}(s)
-Nacetylgalactosamine(; LFP = PyranoseForm, DL = DForm) = Nacetylgalactosamine{DL, LFP, Nothing}(nothing)
+Nacetylgalactosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetylgalactosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylgalactosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylgalactosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylgulosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylgulosamine.
 """
-struct Nacetylgulosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylgulosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylgulosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetylgulosamine{DL, LFP, T}(s)
-Nacetylgulosamine(; LFP = PyranoseForm, DL = DForm) = Nacetylgulosamine{DL, LFP, Nothing}(nothing)
+Nacetylgulosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetylgulosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylgulosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylgulosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylaltosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylaltosamine.
 """
-struct Nacetylaltosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylaltosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylaltosamine(s::T; LFP = PyranoseForm, DL = LForm) where T = Nacetylaltosamine{DL, LFP, T}(s)
-Nacetylaltosamine(; LFP = PyranoseForm, DL = LForm) = Nacetylaltosamine{DL, LFP, Nothing}(nothing)
+Nacetylaltosamine(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Nacetylaltosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylaltosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylaltosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylallosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylallosamine.
 """
-struct Nacetylallosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylallosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylallosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetylallosamine{DL, LFP, T}(s)
-Nacetylallosamine(; LFP = PyranoseForm, DL = DForm) = Nacetylallosamine{DL, LFP, Nothing}(nothing)
+Nacetylallosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetylallosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylallosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylallosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetyltalosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetyltalosamine.
 """
-struct Nacetyltalosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetyltalosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetyltalosamine(s::T; LFP = PyranoseForm, DL = DForm) where T = Nacetyltalosamine{DL, LFP, T}(s)
-Nacetyltalosamine(; LFP = PyranoseForm, DL = DForm) = Nacetyltalosamine{DL, LFP, Nothing}(nothing)
+Nacetyltalosamine(substituent = nothing; LFP = PyranoseForm, DL = DForm, kwargs...) =
+    Nacetyltalosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetyltalosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetyltalosamine{D, P, T}, substituent; kwargs...)
 """
     Nacetylidosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
 
 N-acetylidosamine.
 """
-struct Nacetylidosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}    
+struct Nacetylidosamine{D, P, T} <: AbstractNacetylhexosamine{D, P, T}
     substituent::T
+    name::String
+    elements::Vector{Pair{String, Int}}
+    abbreviation::String
+    attribute::Union{Nothing, ChemicalAttribute}
 end
-Nacetylidosamine(s::T; LFP = PyranoseForm, DL = LForm) where T = Nacetylidosamine{DL, LFP, T}(s)
-Nacetylidosamine(; LFP = PyranoseForm, DL = LForm) = Nacetylidosamine{DL, LFP, Nothing}(nothing)
+Nacetylidosamine(substituent = nothing; LFP = PyranoseForm, DL = LForm, kwargs...) =
+    Nacetylidosamine{DL, LFP, typeof(substituent)}(substituent; kwargs...)
+Nacetylidosamine{D, P, T}(substituent = nothing; kwargs...) where {D, P, T} =
+    make_monosaccharide(Nacetylidosamine{D, P, T}, substituent; kwargs...)
