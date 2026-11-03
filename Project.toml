@@ -1,6 +1,6 @@
 name = "MassSpecBioChemicals"
 uuid = "f4388e49-ae39-433b-b921-aa66233e9152"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Yu-Fong Peng <sciphypar@gmail.com>"]
 
 [deps]
@@ -14,7 +14,7 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 ZipArchives = "49080126-0e18-4c2a-b176-c102e4b3760c"
 
 [compat]
-Dates = "1.10, 1.11"
+Dates = "1.10"
 Downloads = "1"
 IterTools = "1.10"
 MLStyle = "0.4"
@@ -22,4 +22,4 @@ MassSpecChemicals = "0.7.3"
 Parsers = "2.8.10"
 Reexport = "1"
 ZipArchives = "2"
-julia = "1.10, 1.11, 1.12"
+julia = "1.10"
