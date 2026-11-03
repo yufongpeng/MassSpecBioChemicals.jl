@@ -1,43 +1,43 @@
 """
-    parse_carbonchain(Con, bone, echain, schain)
+    parse_carbonchain(parser, Con, bone, echain, schain)
 
 Parse carbon chain string into (`CarbonChain`, snposition code, chirality(s)) or ((`CarbonChain`..., ), snposition code, chirality(s))
 """
-function parse_carbonchain(Con::Type{T}, bone, echain, schain) where {T <: FattyAcyl}
+function parse_carbonchain(parser::LipidParser, Con::Type{T}, bone, echain, schain) where {T <: FattyAcyl}
     mchain = split_carbonchain(schain)
     length(mchain) > 1 && throw(ArgumentError("Maximal number of chains is 1, got $(length(mchain))"))
-    [make_carbonchain(echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
+    [make_carbonchain(parser, echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
 end
 
-function parse_carbonchain(Con::Type{T}, bone, echain, schain) where {T <: NacylAmine}
+function parse_carbonchain(parser::LipidParser, Con::Type{T}, bone, echain, schain) where {T <: NacylAmine}
     mchain = split_carbonchain(schain)
     if length(mchain) == 1 # sum or single
-        [make_carbonchain(echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
+        [make_carbonchain(parser, echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
     elseif length(mchain) == nchainposition(Con) # NA xx:x/xx:x
         map(echain, mchain) do e, m
             info = parse_singlecarbonchain(m)
             p = parse_chainposition(e, info)
             p == :start || p == :inorder || throw(ArgumentError("Invalid chain position, \"$m\""))
-            make_carbonchain(e, info; force = true)
+            make_carbonchain(parser, e, info; force = true)
         end, 0x00
     else
         throw(ArgumentError("Maximal number of chains is $(nchainposition(Con)), got $(length(mchain))"))
     end
 end
 
-function parse_carbonchain(Con::Type{T}, bone, echain, schain) where {T <: FattyAcylEster}
+function parse_carbonchain(parser::LipidParser, Con::Type{T}, bone, echain, schain) where {T <: FattyAcylEster}
     # chiral
     mchain = split_carbonchain(schain)
     if length(mchain) == 1 
-        [make_carbonchain(echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
+        [make_carbonchain(parser, echain, parse_singlecarbonchain(first(mchain)); force = true)], 0x00
     elseif echain == (Acyl, Acyl)
-        fa = make_carbonchain(Acyl, parse_singlecarbonchain(first(mchain)); force = true)
+        fa = make_carbonchain(parser, Acyl, parse_singlecarbonchain(first(mchain)); force = true)
         m = match(r"^/(\d+)O\(FA[^\s]*(.*)\)(\[[RS]\])?$", last(mchain))
         if isnothing(m)
             # /cb:db;O
             hfa = parse_singlecarbonchain(last(mchain))
             parse_chainposition(Acyl, hfa) == :inorder || throw(ArgumentError("Invalid chain position, \"$(last(mchain))\""))
-            [make_carbonchain(Acyl, hfa; force = true), fa], 0x00
+            [make_carbonchain(parser, Acyl, hfa; force = true), fa], 0x00
         else
             p, a, c = m 
             # isnothing(c) || throw(ArgumentError("Hydroxy fatty acid is not chiral."))
@@ -47,21 +47,21 @@ function parse_carbonchain(Con::Type{T}, bone, echain, schain) where {T <: Fatty
             hfa = parse_singlecarbonchain(string(a, ";", p, "OH", isnothing(c) ? "" : c))
             # delete pOH in output 
             # hfa = last(parse_carbonchain_info(Acyl, a; force = true))
-            [make_carbonchain(Acyl, hfa; force = true), fa], parse(UInt8, p)
+            [make_carbonchain(parser, Acyl, hfa; force = true), fa], parse(UInt8, p)
         end
     elseif length(mchain) == nchainposition(Con)
         map(echain, mchain) do e, m
             info = parse_singlecarbonchain(m)
             p = parse_chainposition(e, info)
             p == :start || p == :inorder || throw(ArgumentError("Invalid chain position, \"$m\""))
-            make_carbonchain(e, info; force = true)
+            make_carbonchain(parser, e, info; force = true)
         end, 0x00
     else
         throw(ArgumentError("Maximal number of chains is $(nchainposition(Con)), got $(length(mchain))"))
     end
 end
 
-function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospholipid}}, bone, echain, schain)
+function parse_carbonchain(parser::LipidParser, Con::Type{<: Union{<: Glycerolipid, <: Glycerophospholipid}}, bone, echain, schain)
     mchain = split_carbonchain(schain)
     maxsn = nchainposition(Con)
     length(mchain) > maxsn && throw(ArgumentError("Maximal number of chains is $maxsn, got $(length(mchain))"))
@@ -70,8 +70,8 @@ function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospho
     isn = move_explicit_lipid_chains!(pos, infos, mchain)
     resolve_chain_order!(pos)
     position = uint8ize_sn(Con, pos, mchain)
-    sort_explicit_lipid_chains!(position, isn, infos, mchain)
-    carbonchain = _make_lipid_chain_groups(echain, infos, pos, isn, maxsn, mchain)
+    carbonchain = _make_lipid_chain_groups(parser, echain, infos, pos, isn, maxsn, mchain)
+    sort_explicit_lipid_chains!(position, isn, carbonchain, infos, mchain)
 
     allunique(filter(!=(0x00), position)) || throw(ArgumentError("Overlapped chain position, \"$schain\""))
     
@@ -103,19 +103,19 @@ function parse_carbonchain(Con::Type{<: Union{<: Glycerolipid, <: Glycerophospho
     # prev = prev * base + next
 end
 
-function _make_lipid_chain_groups(echain, infos, positions, explicit, maxsn, chains)
+function _make_lipid_chain_groups(parser::LipidParser, echain, infos, positions, explicit, maxsn, chains)
     if length(chains) == maxsn
-        return [make_carbonchain(Radyl, info) for info in infos]
+        return [make_carbonchain(parser, Radyl, info) for info in infos]
     elseif length(chains) == length(echain)
         all(==(:inorder), positions) &&
             throw(ArgumentError("Expected number of chains in order is $maxsn, got $(length(chains)); change chain separater to \"_\""))
-        return [make_carbonchain(Radyl, info) for info in infos]
+        return [make_carbonchain(parser, Radyl, info) for info in infos]
     end
 
     nremaining = length(chains) - length(explicit)
     positions_remaining = length(echain) - length(explicit)
     if nremaining == 0
-        return [make_carbonchain(Radyl, info) for info in infos]
+        return [make_carbonchain(parser, Radyl, info) for info in infos]
     end
     chains_per_item = positions_remaining ÷ nremaining
     counts = fill(chains_per_item, nremaining)
@@ -125,12 +125,12 @@ function _make_lipid_chain_groups(echain, infos, positions, explicit, maxsn, cha
         counts[i] += 1
         extra -= 1
     end
-    append!(counts, ones(Int, length(explicit)))
-    [count == 1 ? make_carbonchain(Radyl, info) :
-        make_carbonchain(ntuple(_ -> Radyl, count), info) for (count, info) in zip(counts, infos)]
+    counts = vcat(ones(Int, length(explicit)), counts)
+    [count == 1 ? make_carbonchain(parser, Radyl, info) :
+        make_carbonchain(parser, ntuple(_ -> Radyl, count), info) for (count, info) in zip(counts, infos)]
 end
 
-function parse_carbonchain(Con::Type{<: Sphingolipid}, bone, echain, schain)
+function parse_carbonchain(parser::LipidParser, Con::Type{<: Sphingolipid}, bone, echain, schain)
     mchain = split_carbonchain(schain)
     if length(echain) == 3 # ACer...
         # take chain from bone
@@ -142,20 +142,20 @@ function parse_carbonchain(Con::Type{<: Sphingolipid}, bone, echain, schain)
             throw(ArgumentError("Invalid sphingolipid backbone, $bone"))
         end
         if length(mchain) == 1 # sum level
-            pchain = (make_carbonchain(echain, parse_singlecarbonchain(first(mchain))), )
+            pchain = (make_carbonchain(parser, echain, parse_singlecarbonchain(first(mchain))), )
         elseif length(mchain) == 2 # species level
-            pchain = (make_carbonchain(first(echain), parse_singlecarbonchain(first(mchain))), 
-                    make_carbonchain(echain[begin + 1], parse_singlecarbonchain(last(mchain))))
+            pchain = (make_carbonchain(parser, first(echain), parse_singlecarbonchain(first(mchain))), 
+                    make_carbonchain(parser, echain[begin + 1], parse_singlecarbonchain(last(mchain))))
         else
             throw(ArgumentError("Invalid number of chains, $(length(mchain))"))
         end
     elseif length(mchain) == length(echain) == 1 
-        pchain = (make_carbonchain(first(echain), parse_singlecarbonchain(first(mchain))), )
+        pchain = (make_carbonchain(parser, first(echain), parse_singlecarbonchain(first(mchain))), )
     elseif length(mchain) == length(echain) 
-        pchain = (make_carbonchain(first(echain), parse_singlecarbonchain(first(mchain))), 
-                    make_carbonchain(last(echain), parse_singlecarbonchain(last(mchain))))
+        pchain = (make_carbonchain(parser, first(echain), parse_singlecarbonchain(first(mchain))), 
+                    make_carbonchain(parser, last(echain), parse_singlecarbonchain(last(mchain))))
     else # sum level
-        pchain = (make_carbonchain(echain, parse_singlecarbonchain(first(mchain))), )
+        pchain = (make_carbonchain(parser, echain, parse_singlecarbonchain(first(mchain))), )
     end
     # for (i, c) in enumerate(pchain)
     #     @match first(c) begin 
@@ -166,11 +166,11 @@ function parse_carbonchain(Con::Type{<: Sphingolipid}, bone, echain, schain)
     # end
     pchain, 0x00
 end
-function parse_carbonchain(Con::Type{<: Sterol}, bone, pos, chain, sn)
+function parse_carbonchain(::LipidParser, Con::Type{<: Sterol}, bone, echain, schain)
     throw(ArgumentError("`parse_carbonchain` not implemented for `Sterol`"))
 end
 
-function parse_carbonchain(Con::Type{<: Prenol}, bone, pos, chain, sn)
+function parse_carbonchain(::LipidParser, Con::Type{<: Prenol}, bone, echain, schain)
     throw(ArgumentError("`parse_carbonchain` not implemented for `Prenol`"))
 end
 
@@ -199,13 +199,13 @@ function split_carbonchain(schain)
 end
 
 """
-    parse_carbonchain_info(T, mchain; position = nothing, force = false)
+    parse_carbonchain_info(parser, T, mchain; position = nothing, force = false)
 
 Parse carbon chain string into snposition symbol => `CarbonChain`
 
 `force`: force carbon chain to be `T`
 """
-function parse_carbonchain_info(T, mchain; position = nothing, force = false )
+function parse_carbonchain_info(parser::LipidParser, T, mchain; position = nothing, force = false )
     # pos => chain
     # pos:
     # :start start
@@ -223,7 +223,7 @@ function parse_carbonchain_info(T, mchain; position = nothing, force = false )
     # sn, = match(r"(\(sn-*\d*'*\))?$", mchain)
     # r"((?:;(([^)(\[\];/_]*\([^)(]*+(?:(?3)[^)(]*)*+\))?([^)(\[[^\[\]]*+(?:(?3)[^\[\]]*)*+\])?[^)(;/_]*)))"
     info = parse_singlecarbonchain(mchain)
-    parse_chainposition(T, info; position) => make_carbonchain(T, info; force)
+    parse_chainposition(T, info; position) => make_carbonchain(parser, T, info; force)
 end
 
 function parse_singlecarbonchain(mchain) 
@@ -313,22 +313,22 @@ end
 
 Construct `CarbonChain` with parsed information
 """
-make_carbonchain(T, info; force = false) = make_carbonchain(T, info.rad, info.cchain, info.pos, info.ox, info.sil, split_chainmodification(info.mod); force)
-function make_carbonchain(T::Tuple, rad, cchain::AbstractString, pos, ox, sil, mod; force = false)
-    length(T) == 1 && return make_carbonchain(first(T), rad, cchain, pos, ox, sil, mod; force)
+make_carbonchain(parser::LipidParser, T, info; force = false) = make_carbonchain(parser, T, info.rad, info.cchain, info.pos, info.ox, info.sil, split_chainmodification(info.mod); force)
+function make_carbonchain(parser::LipidParser, T::Tuple, rad, cchain::AbstractString, pos, ox, sil, mod; force = false)
+    length(T) == 1 && return make_carbonchain(parser, first(T), rad, cchain, pos, ox, sil, mod; force)
     if SPB in T
         isnothing(rad) || throw(ArgumentError("Invalid fattyacyl chain, \"$rad$cchain\""))
-        CarbonChain{Tuple{T...}}(parse_carbonchainbody(SPB, cchain, pos, ox, sil, mod)...)
+        CarbonChain{Tuple{T...}}(parse_carbonchainbody(parser, SPB, cchain, pos, ox, sil, mod)...)
     elseif SulfoSPB in T
         isnothing(rad) || throw(ArgumentError("Invalid fattyacyl chain, \"$rad$cchain\""))
-        CarbonChain{Tuple{T...}}(parse_carbonchainbody(SulfoSPB, cchain, pos, ox, sil, mod)...)
+        CarbonChain{Tuple{T...}}(parse_carbonchainbody(parser, SulfoSPB, cchain, pos, ox, sil, mod)...)
     elseif any(x -> supertype(x) == AbstractSTRing, T)
         i = findfirst(x -> supertype(x) == AbstractSTRing, T)
-        CarbonChain{Tuple{T...}}(parse_carbonchainbody(T[i], cchain, pos, ox, sil, mod)...)
+        CarbonChain{Tuple{T...}}(parse_carbonchainbody(parser, T[i], cchain, pos, ox, sil, mod)...)
     elseif force
-        CarbonChain{Tuple{T...}}(parse_carbonchainbody(Radyl, cchain, pos, ox, sil, mod)...)
+        CarbonChain{Tuple{T...}}(parse_carbonchainbody(parser, Radyl, cchain, pos, ox, sil, mod)...)
     elseif isnothing(rad) 
-        CarbonChain{Tuple{ntuple(i -> Acyl, length(T))...}}(parse_carbonchainbody(Radyl, cchain, pos, ox, sil, mod)...)
+        CarbonChain{Tuple{ntuple(i -> Acyl, length(T))...}}(parse_carbonchainbody(parser, Radyl, cchain, pos, ox, sil, mod)...)
     else
         n, rad = match(r"([d,t,e]?)([P,O,E]?-?)", rad)
         n = @match n begin
@@ -348,14 +348,14 @@ function make_carbonchain(T::Tuple, rad, cchain::AbstractString, pos, ox, sil, m
         end
         echain[begin:begin + n - 1] .= rad
         Chain = Tuple{echain...}
-        CarbonChain{Chain}(parse_carbonchainbody(Radyl, cchain, pos, ox, sil, mod)...)
+        CarbonChain{Chain}(parse_carbonchainbody(parser, Radyl, cchain, pos, ox, sil, mod)...)
     end
 end
 
-function make_carbonchain(::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: Radyl}
+function make_carbonchain(parser::LipidParser, ::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: Radyl}
     if force 
         # check n rad ch
-        return CarbonChain{T}(parse_carbonchainbody(T, cchain, pos, ox, sil, mod)...)
+        return CarbonChain{T}(parse_carbonchainbody(parser, T, cchain, pos, ox, sil, mod)...)
     end
     if isnothing(rad)
         rad = "" 
@@ -371,31 +371,31 @@ function make_carbonchain(::Type{T}, rad, cchain::AbstractString, pos, ox, sil, 
         _    => throw(ArgumentError("Invalid fattyacyl chain, \"$rad$cchain\""))
     end
     Chain <: T || throw(ArgumentError("Fattyacyl chain does not match to class"))
-    CarbonChain{Chain}(parse_carbonchainbody(Chain, cchain, pos, ox, sil, mod)...)
+    CarbonChain{Chain}(parse_carbonchainbody(parser, Chain, cchain, pos, ox, sil, mod)...)
 end
 
-function make_carbonchain(::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: AbstractSPB}
+function make_carbonchain(parser::LipidParser, ::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: AbstractSPB}
     isnothing(rad) || throw(ArgumentError("Invalid sphingoid base, \"$rad$cchain\""))
-    CarbonChain{T}(parse_carbonchainbody(T, cchain, pos, ox, sil, mod)...)
+    CarbonChain{T}(parse_carbonchainbody(parser, T, cchain, pos, ox, sil, mod)...)
 end
 
-function make_carbonchain(::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: AbstractSTRing}
+function make_carbonchain(::LipidParser, ::Type{T}, rad, cchain::AbstractString, pos, ox, sil, mod; force = false) where {T <: AbstractSTRing}
     throw(ArgumentError("`parse_carbonchain` not implemented for `$T`"))
 end
 
 make_carbonchain(T, carbon::C, doublebond, substituent, chirality, isotopiclabel = nothing) where {C <: Number} = CarbonChain{T}(UInt8(carbon), uint8ize(doublebond), uint8ize(substituent), uint8ize(chirality), isotopiclabel)
 
 """
-    parse_carbonchainbody(T, cchain, pos, ox, sil, mod; force = false) -> (carbon, doublebond, substituent, isotopiclabel)
+    parse_carbonchainbody(parser, T, cchain, pos, ox, sil, mod; force = false) -> (carbon, doublebond, substituent, isotopiclabel)
 
 Parse carbon chain info strings into correct type and format for `CarbonChain` construction
 """
-function parse_carbonchainbody(::Type{T}, cchain, pos, ox, sil, mod = false) where {T <: Radyl}
+function parse_carbonchainbody(parser::LipidParser, ::Type{T}, cchain, pos, ox, sil, mod = false) where {T <: Radyl}
     cb, db = match(r"(\d+):(\d+)", cchain)
     cb = parse(UInt8, cb)
     db = parse(UInt8, db)
     # mod
-    sub, chi = parse_chainmodification(T, mod, ox)
+    sub, chi = parse_chainmodification(parser, T, mod, ox)
     # if !isnothing(ch) 
     #     ch = ch == "R" ? RChirality() : ch == "S" ? SChirality() : ch == "U" ? RSChirality() : throw(ArgumentError("Invalid chirality for carbon chain."))
     #     if isnothing(chi) 
@@ -413,11 +413,11 @@ function parse_carbonchainbody(::Type{T}, cchain, pos, ox, sil, mod = false) whe
     cb, db, sub, chi, nothing
 end
 
-function parse_carbonchainbody(::Type{T}, cchain, pos, ox, sil, mod = false) where {T <: AbstractSPB}
+function parse_carbonchainbody(parser::LipidParser, ::Type{T}, cchain, pos, ox, sil, mod = false) where {T <: AbstractSPB}
     cb, db = match(r"(\d+):(\d+)", cchain)
     cb = parse(UInt8, cb)
     db = parse(UInt8, db)
-    sub, chi = parse_chainmodification(T, mod, ox)
+    sub, chi = parse_chainmodification(parser, T, mod, ox)
     if !isnothing(pos) 
         db = parse_geometricconfig(db, pos)
         if first(last(db)) == cb 
@@ -427,7 +427,7 @@ function parse_carbonchainbody(::Type{T}, cchain, pos, ox, sil, mod = false) whe
     cb, db, sub, chi, nothing
 end
 
-function parse_carbonchainbody(::Type{T}, cchain, pos, ox, sil, mod) where {T <: AbstractSTRing}
+function parse_carbonchainbody(::LipidParser, ::Type{T}, cchain, pos, ox, sil, mod) where {T <: AbstractSTRing}
     throw(ArgumentError("`parse_carbonchainbody` not implemented for `$T`"))
 end
 

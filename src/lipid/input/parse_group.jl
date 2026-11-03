@@ -1,7 +1,7 @@
 """
 """
-function parse_glycomp2(s::AbstractString)
-    parse_glycomp(replace(s, r"^SHex" => "Hex3S"))
+function parse_glycomp2(parser::LipidParser, s::AbstractString)
+    parse_chemical(parser.glycomp, replace(s, r"^SHex" => "Hex3S"))
 end
 
 # function iter_glycomp!(result::Vector{Pair{Monosaccharide, UInt8}}, s::AbstractString)
@@ -40,22 +40,22 @@ end
 #     end
 # end
 
-function parse_gsl_isomer(cls, post)
-    parse_series_glycan(string(cls, isnothing(post) ? "" : post))
+function parse_gsl_isomer(parser::LipidParser, cls, post)
+    parse_chemical(parser.seriesglycan, string(cls, isnothing(post) ? "" : post))
 end
 
 """
-    parse_headgroup(s)
+    parse_headgroup(parser, s)
 
 Parse string into chemical as headgroup
 """
-function parse_headgroup(s::AbstractString)
+function parse_headgroup(parser::LipidParser, s::AbstractString)
     s = string(s)
     m = match(r"(\[[^\]\[]*(?:(?1)[^\]\[]*)*-\d*\)?\])+$", s)
     if !isnothing(m)
         ms = [replace(m.match, r"^\[" => "", r"\]" => "") for m in eachmatch(r"(\[[^\]\[]*(?:(?1)[^\]\[]*)*-\d*\)?\])", m.match)]
         pushfirst!(ms, s[begin:m.match.offset])
-        return ntuple(i -> parse_headgroup(ms[i]), length(ms))
+        return ntuple(i -> parse_headgroup(parser, ms[i]), length(ms))
     end
     p = firstindex(s)
     cs = AbstractChemical[]
@@ -66,7 +66,7 @@ function parse_headgroup(s::AbstractString)
         n = m.match.offset
         if n > p
             rs = collect(eachmatch(r"((?:[DL]+-)*[^-]*?[^\d])(\(?(?:\(a)?(?:\(b)?[αβ]?)(\d*)-(\d*)\)?", s[p:n]))
-            ms = get_headgroup_compound.(rs)
+            ms = get_headgroup_compound.(Ref(parser), rs)
             dmp = [dehydroxyposition(a) => dehydrogenposition(b) for (a, b) in IterTools.partition(ms, 2, 1)]
             push!(dmp, dehydroxyposition(last(ms)) => 0x00)
             trace = false
@@ -75,7 +75,7 @@ function parse_headgroup(s::AbstractString)
             end
             linktocheck = trace ? lastindex(ls) : nothing
         end
-        push!(cs, parse_headgroup(first(match(r"^\[?(.*?)\]?$", m.match))))
+        push!(cs, parse_headgroup(parser, first(match(r"^\[?(.*?)\]?$", m.match))))
         push!(ls, last(last(cs).linkage))
         p = n + m.match.ncodeunits + 1
     end
@@ -85,7 +85,7 @@ function parse_headgroup(s::AbstractString)
         rs = rs[begin:end - 1]
     end
     if !isempty(rs)
-        ms = get_headgroup_compound.(rs)
+        ms = get_headgroup_compound.(Ref(parser), rs)
         if !isnothing(linktocheck)
             dp = dehydrogenposition(first(ms))
             ls[linktocheck] = first(ls[linktocheck]) => Linkageposition(dp)
@@ -100,7 +100,7 @@ function parse_headgroup(s::AbstractString)
     end
     linktocheck = trace ? lastindex(ls) : nothing
     if li < lastindex(s)
-        push!(cs, parse_singleheadgroup(first(match(r"^\[?(.*?)\]?$", s[li:end]))))
+        push!(cs, parse_singleheadgroup(parser, first(match(r"^\[?(.*?)\]?$", s[li:end]))))
         if !isnothing(linktocheck)
             ls[linktocheck] = first(ls[linktocheck]) => Linkageposition(dehydrogenposition(last(cs)))
         end 
@@ -111,15 +111,15 @@ function parse_headgroup(s::AbstractString)
     all(x -> x isa Saccharide, cs) ? Glycan((cs..., ), convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, ls)) :  
     all(x -> x isa αAminoAcid, cs) ? Peptide((cs..., )) : DehydratedChemical((cs..., ), ls, nothing)
 end
-parse_headgroup(::Nothing) = nothing
+parse_headgroup(::LipidParser, ::Nothing) = nothing
 
-function parse_singleheadgroup(s)
+function parse_singleheadgroup(parser::LipidParser, s)
     s = startswith(s, r"\d+:\d+") ? string("FOH ", s) : s
     try 
-        parse_lipid(s)
+        parse_chemical(parser, s)
     catch
         try
-            parse_monosaccharide(s)
+            parse_chemical(parser.monosaccharide, s)
         catch
             try
                 parse_aa3(s)
@@ -144,9 +144,9 @@ function parse_lipidonlygroup(s)
     end
 end
 
-function get_headgroup_compound(x)
+function get_headgroup_compound(parser::LipidParser, x)
     m, mp, mi, mj = x
-    parse_singleheadgroup(first(match(r"^\[?(.*?)\]?$", m)))
+    parse_singleheadgroup(parser, first(match(r"^\[?(.*?)\]?$", m)))
 end
 
 function push_new_headgroup!(cs, ls, x, c, d)
@@ -187,11 +187,11 @@ function split_tail_components(s)
 end
 
 """
-    parse_tailgroup(s)
+    parse_tailgroup(parser, s)
 
 Parse string into chemical as tailgroup
 """
-function parse_tailgroup(s::AbstractString)
+function parse_tailgroup(parser::LipidParser, s::AbstractString)
     s = string(s)
     # linkage
     p = firstindex(s)
@@ -210,7 +210,7 @@ function parse_tailgroup(s::AbstractString)
         # else # start with -
         #     prep = 0x00
         # end
-        ms = get_tailgroup_compound.(rs)
+        ms = get_tailgroup_compound.(Ref(parser), rs)
         dmp = Pair[dehydrogenposition(a) => dehydroxyposition(b) for (a, b) in IterTools.partition(ms, 2, 1)]
         pushfirst!(dmp, prep => dehydroxyposition(first(ms)))
         for (x, c, d) in zip(rs, ms, dmp)
@@ -245,7 +245,7 @@ function parse_tailgroup(s::AbstractString)
         if n > p
             # rs = collect(eachmatch(r"\(?(\d*)-(\d*)([abαβ]?)\)?((?:[DL]+-)*[^-\[]*[^\[])", s[p:n]))
             rs = split_tail_components(s[p:n])
-            ms = get_tailgroup_compound.(rs)
+            ms = get_tailgroup_compound.(Ref(parser), rs)
             dmp = [dehydrogenposition(a) => dehydroxyposition(b) for (a, b) in IterTools.partition(ms, 2, 1)]
             pushfirst!(dmp, prep => dehydroxyposition(first(ms)))
             for (x, c, d) in zip(rs, ms, dmp)
@@ -253,14 +253,14 @@ function parse_tailgroup(s::AbstractString)
             end
             prep = dehydrogenposition(last(ms))
         end
-        pushfirst!(cs, parse_tailgroup(first(match(r"^\[?(.*?)\]?$", m.match))))
+        pushfirst!(cs, parse_tailgroup(parser, first(match(r"^\[?(.*?)\]?$", m.match))))
         pushfirst!(ls, last(first(cs).linkage))
         p = n + m.match.ncodeunits + 1
     end
     if p < lastindex(s) # tail main chain
         # rs = collect(eachmatch(r"\(?(\d*)-(\d*)([abαβ]?)\)?((?:[DL]+-)*[^-\[]*[^\[])", s[p:end]))
         rs = split_tail_components(s[p:end])
-        ms = get_tailgroup_compound.(rs)
+        ms = get_tailgroup_compound.(Ref(parser), rs)
         dmp = [dehydrogenposition(a) => dehydroxyposition(b) for (a, b) in IterTools.partition(ms, 2, 1)]
         pushfirst!(dmp, prep => dehydroxyposition(first(ms)))
         for (x, c, d) in zip(rs, ms, dmp)
@@ -270,16 +270,16 @@ function parse_tailgroup(s::AbstractString)
     all(x -> x isa Saccharide, cs) ? Glycan((cs..., ), convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, ls)) : 
     all(x -> x isa αAminoAcid, cs) ? Peptide((cs..., )) : DehydratedChemical((cs..., ), ls)
 end
-parse_tailgroup(::Nothing) = nothing
+parse_tailgroup(::LipidParser, ::Nothing) = nothing
 
-function parse_tailsubstituent(l::AbstractString, fg::AbstractString; onlinked = true)
+function parse_tailsubstituent(parser::LipidParser, l::AbstractString, fg::AbstractString; onlinked = true)
     if isempty(l)
         # specieslevel
         # only carbon chain
         # parse_singletailgroup(fg)
         # throw(ArgumentError("Invalid species modification, \"$s\""))
         # not allowed ;5(16:1) => FOL 16:1 
-        m = parse_singletailgroup(fg)
+        m = parse_singletailgroup(parser, fg)
         return dehydroxygroup(m)
     end
     !onlinked && !isempty(l) && throw(ArgumentError("O-linked or N-linked modification not allowed, \"$s\""))
@@ -297,7 +297,7 @@ function parse_tailsubstituent(l::AbstractString, fg::AbstractString; onlinked =
                 break 
             end
         end
-        m = isnothing(m) ? parse_tailgroup(fg) : m
+        m = isnothing(m) ? parse_tailgroup(parser, fg) : m
         mf = last(getchaincomponent(m))
         lg = Dehydroxy
         l = l == "O" ? OLinkage() : NLinkage()
@@ -308,7 +308,7 @@ function parse_tailsubstituent(l::AbstractString, fg::AbstractString; onlinked =
                 break 
             end
         end
-        m = isnothing(m) ? parse_headgroup(fg) : m 
+        m = isnothing(m) ? parse_headgroup(parser, fg) : m 
         mf = first(getchaincomponent(m))
         lg = Dehydrogen
         l = CarboxylicLinkage()
@@ -336,13 +336,13 @@ function parse_tailsubstituent(l::AbstractString, fg::AbstractString; onlinked =
     XLinkedFunctionalGroup(l, sub)
 end
 
-function parse_singletailgroup(s)
+function parse_singletailgroup(parser::LipidParser, s)
     s = startswith(s, r"\d+:\d+") ? string("FOH ", s) : s
     try 
-        parse_lipid(s)
+        parse_chemical(parser, s)
     catch
         try
-            parse_monosaccharide(s)
+            parse_chemical(parser.monosaccharide, s)
         catch
             try
                 parse_aa3(s)
@@ -353,9 +353,9 @@ function parse_singletailgroup(s)
     end
 end
 
-function get_tailgroup_compound(x)
+function get_tailgroup_compound(parser::LipidParser, x)
     mj, mi, mp, m = x
-    parse_singletailgroup(first(match(r"^\[?(.*?)\]?$", m)))
+    parse_singletailgroup(parser, first(match(r"^\[?(.*?)\]?$", m)))
 end
 
 function push_new_tailgroup!(cs, ls, x, c, d)

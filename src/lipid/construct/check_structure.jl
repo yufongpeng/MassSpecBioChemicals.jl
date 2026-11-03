@@ -43,39 +43,25 @@ glycerol_aa_rs(aa::αAminoAcid) = alpha_rs(aa)
 
 function check_structure!(::Type{<: SphingoBone}, bone, chain, poss, bone_species)
     fc = first(chain)
-    chain_species = fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
-    if bone_species && chain_species || isnothing(bone)
-        check_configuration!(bone, fc) 
-        chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
-    elseif chain_species
-        all(iszero ∘ first, poss) || throw(ArgumentError("Headgroup position cannot be specified at (molecular)specieslevel or without headgroup(s)"))
+    if fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
+        (bone_species && all(iszero ∘ first, poss)) || throw(ArgumentError("Headgroup position cannot be specified at (molecular)specieslevel or without headgroup(s)"))
         check_configuration!(bone, fc) 
         chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
     elseif ispropertyposition(fc.substituent) || (isnothing(fc.substituent) && any(!iszero ∘ first, poss))
-        newfc = false
-        if isnothing(fc.substituent)
-            sub = Pair{UInt8, AbstractFunctionalGroup}[]
-            newfc = true
-        elseif XLinkedFunctionalGroup <: eltype(fc.substituent).parameters[end]
-            sub = fc.substituent
+        if isnothing(bone)
+            sub, newfc = convert_possub_new(Hydrogen, fc.substituent)
         else
-            sub = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, fc.substituent)
-            newfc = true
-        end
-        if isempty(sub) || all(x -> last(x) == Hydroxy() || last(x) == Hydrogen(), sub)
-            if length(poss) > 1 
-                push!(sub, first(first(poss)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(bone))))
-                for p in @view poss[2:end]
-                    push!(sub, first(p) => XLinkedFunctionalGroup(OLinkage(), NullSubstituent()))
-                end
+            sub, newfc = convert_possub_new(XLinkedFunctionalGroup, fc.substituent)
+            if isempty(sub) || all(x -> last(x) == Hydroxy() || last(x) == Hydrogen(), sub)
+                push_pos_headgroup!(sub, poss, bone)
+                chain_chi = vcat(fc.chirality, poss)
+                newfc = true 
             else
-                push!(sub, first(first(poss)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)))
+                chain_chi = fc.chirality
             end
-            chain_chi = vcat(fc.chirality, poss) 
-        else
-            chain_chi = fc.chirality
         end
-        sort_chainmodification!(sub) 
+        push_p2_hydrogen!(sub)
+        sort_chainmodification!(sub)
         # check poss chirality
         if newfc
             fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, chain_chi, fc.isotopiclabel)
@@ -83,50 +69,19 @@ function check_structure!(::Type{<: SphingoBone}, bone, chain, poss, bone_specie
         check_configuration!(bone, fc) 
         chi = [get_chainchirality(fc.chirality, p) for (p, _) in poss]
         chi = length(chi) == 1 ? first(chi) : (chi..., )
+    elseif isnothing(bone)
+        check_configuration!(bone, fc) 
+        chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
     elseif ispropertynumber(fc.substituent) || isnothing(fc.substituent)
-        newfc = false
-        if isnothing(fc.substituent)
-            sub = Pair{XLinkedFunctionalGroup, UInt8}[]
-            newfc = true
-        elseif XLinkedFunctionalGroup <: eltype(fc.substituent).parameters[begin]
-            sub = fc.substituent
-        else
-            sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
-            newfc = true
-        end
+        sub, newfc = convert_numsub_new(XLinkedFunctionalGroup, fc.substituent)
         if isempty(sub) || all(x -> first(x) == Hydroxy() || first(x) == Hydrogen(), sub)
-            if length(poss) > 1
-                m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(bone)))
-                id = findfirst(x -> first(x) == m, sub)
-                if isnothing(id)
-                    push!(sub, m => 0x01)
-                else
-                    n = last(sub[id])
-                    sub[id] = m => (n + 0x01)
-                end
-                m = XLinkedFunctionalGroup(OLinkage(), NullSubstituent())
-                id = findfirst(x -> first(x) == m, sub)
-                if isnothing(id)
-                    push!(sub, m => UInt8(length(poss) - 1))
-                else
-                    n = last(sub[id])
-                    sub[id] = m => (n + UInt8(length(poss) - 1))
-                end
-            else
-                m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone))
-                id = findfirst(x -> first(x) == m, sub)
-                if isnothing(id)
-                    push!(sub, m => 0x01)
-                else
-                    n = last(sub[id])
-                    sub[id] = m => (n + 0x01)
-                end
-            end
+            push_num_headgroup!(sub, poss, bone)
+            newfc = true
         end
         sort_chainmodification!(sub)
         headposition = [first(p) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(bone)) for p in poss]
         if newfc
-            fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, poss, fc.isotopiclabel)
+            fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, copy(poss), fc.isotopiclabel)
         end
         check_configuration!(bone, fc; headposition) 
         chi = length(poss) == 1 ? RSChirality() : (RSChirality(), RSChirality())
@@ -145,95 +100,47 @@ end
 
 function check_structure!(::Type{<: MixSphingoBone}, bone, chain, poss, bone_species)
     fc = first(chain)
-    chain_species = fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
-    if bone_species && chain_species || isnothing(bone)
-        check_configuration!(bone, fc) 
-        chi = last.(first.(poss))
-    elseif chain_species
-        all(iszero ∘ first, vcat(poss...)) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
+    if fc isa CarbonChain{<: Tuple{<: AbstractSPB, <: Acyl}} || (!isnothing(fc.substituent) && any(x -> first(x) isa OxygenAtom, fc.substituent))
+        (bone_species && all(iszero ∘ first, vcat(poss...))) || throw(ArgumentError("Headgroup position cannot be specified at specieslevel or without headgroup(s)"))
         check_configuration!(bone, fc) 
         chi = last.(first.(poss))
     elseif ispropertyposition(fc.substituent) || (isnothing(fc.substituent) && any(x -> any(!iszero ∘ first, x), poss))
         newfc = false
-        if isnothing(fc.substituent)
-            sub = Pair{UInt8, AbstractFunctionalGroup}[]
-            newfc = true
-        elseif XLinkedFunctionalGroup <: eltype(fc.substituent).parameters[end]
-            sub = fc.substituent
+        if isnothing(bone)
+            sub, newfc = convert_possub_new(Hydrogen, fc.substituent)
         else
-            sub = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, fc.substituent)
-            newfc = true
-        end
-        length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
-        if isempty(sub) || all(x -> last(x) == Hydroxy() || last(x) == Hydrogen(), sub)
-            for (b, p) in zip(bone, poss)
-                if length(p) > 1 
-                    push!(sub, first(first(p)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(b))))
-                    for x in @view poss[2:end]
-                        push!(sub, first(x) => XLinkedFunctionalGroup(OLinkage(), NullSubstituent()))
-                    end
-                else
-                    push!(sub, first(first(p)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b)))
+            sub, newfc = convert_possub_new(XLinkedFunctionalGroup, fc.substituent)
+            length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
+            if isempty(sub) || all(x -> last(x) == Hydroxy() || last(x) == Hydrogen(), sub)
+                for (b, p) in zip(bone, poss)
+                    push_pos_headgroup!(sub, p, b)
                 end
+                chain_chi = vcat(fc.chirality, poss...) 
+                newfc = true
+            else
+                chain_chi = fc.chirality
             end
-            chain_chi = vcat(fc.chirality, poss...) 
-        else
-            chain_chi = fc.chirality
         end
+        push_p2_hydrogen!(sub)
         sort_chainmodification!(sub) 
         if newfc
             fc = make_carbonchain(typeof(fc).parameters[begin], fc.carbon, fc.doublebond, sub, chain_chi, fc.isotopiclabel)
         end
         check_configuration!(bone, fc) 
         chi = map(poss) do pos 
-            if length(pos) == 1
-                get_chainchirality(fc.chirality, first(first(pos)))
-            else 
-                [get_chainchirality(fc.chirality, first(p)) for p in pos]
-            end
+            length(pos) == 1 ? get_chainchirality(fc.chirality, first(first(pos))) : [get_chainchirality(fc.chirality, first(p)) for p in pos]
         end
+    elseif isnothing(bone)
+        check_configuration!(bone, fc) 
+        chi = last.(first.(poss))
     elseif ispropertynumber(fc.substituent) || isnothing(fc.substituent)
-        newfc = false
-        if isnothing(fc.substituent)
-            sub = Pair{AbstractFunctionalGroup, UInt8}[]
-            newfc = true
-        elseif XLinkedFunctionalGroup <: eltype(fc.substituent).parameters[begin]
-            sub = fc.substituent
-        else
-            sub = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, fc.substituent)
-            newfc = true
-        end
+        sub, newfc = convert_numsub_new(XLinkedFunctionalGroup, fc.substituent)
         length(poss) == length(bone) || throw(ArgumentError("Number of headgroups does not equal number of positions."))
         if isempty(sub) || all(x -> first(x) == Hydroxy() || first(x) == Hydrogen(), sub)
             for (b, p) in zip(bone, poss)
-                if length(p) > 1
-                    m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(b)))
-                    id = findfirst(x -> first(x) == m, sub)
-                    if isnothing(id)
-                        push!(sub, m => 0x01)
-                    else
-                        n = last(sub[id])
-                        sub[id] = m => (n + 0x01)
-                    end
-                    m = XLinkedFunctionalGroup(OLinkage(), NullSubstituent())
-                    id = findfirst(x -> first(x) == m, sub)
-                    if isnothing(id)
-                        push!(sub, m => UInt8(length(p) - 1))
-                    else
-                        n = last(sub[id])
-                        sub[id] = m => (n + UInt8(length(p) - 1))
-                    end
-                else
-                    m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(b))
-                    id = findfirst(x -> first(x) == m, sub)
-                    if isnothing(id)
-                        push!(sub, m => 0x01)
-                    else
-                        n = last(sub[id])
-                        sub[id] = m => (n + 0x01)
-                    end
-                end
+                push_num_headgroup!(sub, p, b)
             end
+            newfc = true
         end
         sort_chainmodification!(sub)
         headposition = mapreduce(vcat, zip(bone, poss)) do (b, p) 
@@ -264,4 +171,54 @@ end
 function get_chainchirality(chirality, p)
     i = findfirst(x -> first(x) == p, chirality)
     isnothing(i) ? RSChirality() : last(chirality[i])
+end
+
+convert_possub_new(::Type{T}, sub::Nothing) where T = Pair{UInt8, AbstractFunctionalGroup}[], true
+convert_possub_new(::Type{T}, sub::Vector{Pair{UInt8, S}}) where {S, T<:S} = sub, false
+convert_possub_new(::Type{T}, sub) where T = convert(Vector{Pair{UInt8, AbstractFunctionalGroup}}, sub), true
+
+convert_numsub_new(::Type{T}, sub::Nothing) where T = Pair{AbstractFunctionalGroup, UInt8}[], true
+convert_numsub_new(::Type{T}, sub::Vector{Pair{S, UInt8}}) where {S, T<:S} = sub, false
+convert_numsub_new(::Type{T}, sub) where T = convert(Vector{Pair{AbstractFunctionalGroup, UInt8}}, sub), true
+
+push_p2_hydrogen!(sub) = 0x02 => Hydrogen() in sub || push!(sub, 0x02 => Hydrogen())
+function push_pos_headgroup!(sub, pos, headgroup)
+    if length(pos) > 1 
+        push!(sub, first(first(pos)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(headgroup))))
+        for x in @view pos[2:end]
+            push!(sub, first(x) => XLinkedFunctionalGroup(OLinkage(), NullSubstituent()))
+        end
+    else
+        push!(sub, first(first(pos)) => XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(headgroup)))
+    end
+end
+
+function push_num_headgroup!(sub, num, headgroup)
+    if length(num) > 1
+        m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(dehydroxygroup(headgroup)))
+        id = findfirst(x -> first(x) == m, sub)
+        if isnothing(id)
+            push!(sub, m => 0x01)
+        else
+            n = last(sub[id])
+            sub[id] = m => (n + 0x01)
+        end
+        m = XLinkedFunctionalGroup(OLinkage(), NullSubstituent())
+        id = findfirst(x -> first(x) == m, sub)
+        if isnothing(id)
+            push!(sub, m => UInt8(length(num) - 1))
+        else
+            n = last(sub[id])
+            sub[id] = m => (n + UInt8(length(num) - 1))
+        end
+    else
+        m = XLinkedFunctionalGroup(OLinkage(), dehydroxygroup(headgroup))
+        id = findfirst(x -> first(x) == m, sub)
+        if isnothing(id)
+            push!(sub, m => 0x01)
+        else
+            n = last(sub[id])
+            sub[id] = m => (n + 0x01)
+        end
+    end
 end

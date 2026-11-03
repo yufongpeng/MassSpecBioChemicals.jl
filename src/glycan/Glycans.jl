@@ -21,7 +21,7 @@ import MassSpecChemicals:
     defaultchemicalkwargs, parse_chemical
 using ..MassSpecBioChemicals.Proteins: parse_aa_fg
 using ..MassSpecBioChemicals: lk, AbstractFunctionalGroup, ntotallinkage, leavinggroupelements
-import Base: show, length
+import Base: show, length, ==, copy, hash
 import ..MassSpecBioChemicals: 
     repr_linkage, makelinkage, transformlinkage, 
     chainedchemical, getchaincomponent, getchainlinkage, getchainconfig, composition, 
@@ -53,6 +53,7 @@ export Saccharide, Monosaccharide,
         CycliceForm, 
         Deoxy, 
         Epi, 
+        SaccharideParser, MonosaccharideParser, GlyCompParser, SeriesGlycanParser,
         
         SimpleGlcseries,
         GM4,
@@ -503,7 +504,7 @@ function Glycan(chain, linkage::Vector{Pair{AbstractAnomerposition, Linkageposit
            String(kw.abbreviation), buildattribute(new_attr, pairs(attr)))
 end
 Glycan(chain, linkage::Vector; kwargs...) = Glycan(chain, convert(Vector{Pair{AbstractAnomerposition, Linkageposition}}, linkage); kwargs...)
-Glycan(sugar::Vararg{<: Saccharide}; kwargs...) = Glycan(sugar, Pair{AbstractAnomerposition, Linkageposition}[]; kwargs...)
+Glycan(sugar::Vararg{T}; kwargs...) where {T<:Saccharide} = Glycan(sugar, Pair{AbstractAnomerposition, Linkageposition}[]; kwargs...)
 #= Tuple: order, length of linkage == chain, defined reducing end anomer, 
 S::UInt8
 

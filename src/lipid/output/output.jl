@@ -1,23 +1,23 @@
 include("abbr.jl")
 
-# """
-#     decode_sn(lipid)
+"""
+    decode_sn(lipid)
 
-# Decode snpositioncode into vector of snposition
-# """
-# function decode_sn(lipid::T) where {T <: Lipid}
-#     n = length(getlipidchain(lipid))
-#     position = zeros(Int, n)
-#     sn = lipid.sn
-#     ep = n - 1
-#     bs = nchainposition(T) + 1
-#     for i in eachindex(position)
-#         p, sn = divrem(sn, bs ^ ep)
-#         position[i] = p
-#         ep -= 1
-#     end
-#     position
-# end
+Decode snpositioncode into vector of snposition
+"""
+function decode_sn(lipid::T) where {T <: Lipid}
+    n = length(getlipidchain(lipid))
+    position = zeros(Int, n)
+    sn = lipid.sn
+    ep = n - 1
+    bs = nchainposition(T) + 1
+    for i in eachindex(position)
+        p, sn = divrem(sn, bs ^ ep)
+        position[i] = p
+        ep -= 1
+    end
+    position
+end
 
 # """
 #     repr_position(lipid)

@@ -60,36 +60,36 @@ function split_chainmodification_c(mod)
 end
 
 """
-    parse_chainmodification(T, mod, ox = nothing)
+    parse_chainmodification(parser, T, mod, ox = nothing)
 
 Parse chain modification for full structure level
 """
-function parse_chainmodification(::Type{<: Radyl}, mod, ox = nothing)
+function parse_chainmodification(parser::LipidParser, ::Type{<: Radyl}, mod, ox = nothing)
     isempty(mod) && isnothing(ox) && return (nothing, Pair{UInt8, RSSystem}[])
     i = findfirst(x -> !isnothing(match(r"^;O\d*$", x)), mod)
     if isnothing(ox) && isnothing(i)
-        split_fg_chirality!(vcat((parse_definedmodification(x) for x in mod)...))
+        split_fg_chirality!(vcat((parse_definedmodification(parser, x) for x in mod)...))
     elseif isnothing(ox)
-        (sort_chainmodification!([parse_speciesmodification(x) for x in mod]), Pair{UInt8, RSSystem}[])
+        (sort_chainmodification!([parse_speciesmodification(parser, x) for x in mod]), Pair{UInt8, RSSystem}[])
     elseif isnothing(i)
         push!(mod, ox)
-        (sort_chainmodification!([parse_speciesmodification(x) for x in mod]), Pair{UInt8, RSSystem}[])
+        (sort_chainmodification!([parse_speciesmodification(parser, x) for x in mod]), Pair{UInt8, RSSystem}[])
     else
         throw(ArgumentError("Duplicated oxygen atom in chain modification"))
     end
 end
 
-function parse_chainmodification(::Type{<: AbstractSPB}, mod, ox)
+function parse_chainmodification(parser::LipidParser, ::Type{<: AbstractSPB}, mod, ox)
     # except O-
     isempty(mod) && isnothing(ox) && return (nothing, Pair{UInt8, RSSystem}[])
     i = findfirst(x -> !isnothing(match(r"^;O\d*$", x)), mod)
     if isnothing(ox) && isnothing(i)
-        split_fg_chirality!(vcat((parse_definedmodification(x) for x in mod)...))
+        split_fg_chirality!(vcat((parse_definedmodification(parser, x) for x in mod)...))
     elseif isnothing(ox)
-        (sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
+        (sort_chainmodification!([parse_speciesmodification(parser, x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
     elseif isnothing(i)
         push!(mod, ox)
-        (sort_chainmodification!([parse_speciesmodification(x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
+        (sort_chainmodification!([parse_speciesmodification(parser, x; onlinked = false) for x in mod]), Pair{UInt8, RSSystem}[])
     else
         throw(ArgumentError("Duplicated oxygen atom in chain modification"))
     end
@@ -108,17 +108,17 @@ function parse_chainmodification(::Type{<: AbstractSPB}, mod, ox)
     # end
 end
 
-function parse_chainmodification(::Type{T}, mod) where {T <: AbstractSTRing}
+function parse_chainmodification(::LipidParser, ::Type{T}, mod, ox = nothing) where {T <: AbstractSTRing}
     throw(ArgumentError("`parse_chainmodification` not implemented for `$T`"))
 end
 
 """
-    parse_speciesmodification(mod; onlinked = true)
+    parse_speciesmodification(parser, mod; onlinked = true)
 
 Parse chain modification of species level
 `onlinked`: allow O-linked or N-linked modification, e.g. "OMe", "O(FA 16:0)".
 """
-function parse_speciesmodification(mod; onlinked = true)
+function parse_speciesmodification(parser::LipidParser, mod; onlinked = true)
     FG_SP = onlinked ? FG_SPECIES : FG_SPECIES_CLINKED
     for (k, v) in FG_SP
         m = match(Regex(string("^;\\(?", k, "\\)?(\\d*)\$")), mod)
@@ -134,7 +134,7 @@ function parse_speciesmodification(mod; onlinked = true)
     !onlinked && !isempty(l) && throw(ArgumentError("O-linked or N-linked modification not allowed, \"$mod\$"))
     l, m, n = m
     m = startswith(m, r"\d+:\d+") ? string("FOH ", m) : m
-    c = parse_lipid(m)
+    c = parse_chemical(parser, m)
     c = isempty(l) ? Substituent(Dehydroxy, c, lk(dehydroxyposition(c))) : 
         l == "O" ? XLinkedFunctionalGroup(OLinkage(), Substituent(Dehydroxy, c, lk(dehydroxyposition(c)))) : 
             XLinkedFunctionalGroup(NLinkage(), Substituent(Dehydroxy, c, lk(dehydroxyposition(c))))
@@ -165,11 +165,11 @@ function parse_structureposition(v::Oxo, x)
 end
 # nCOX[n-1R/S] = C_(n-1)-COX
 """
-    parse_definedmodification(mod)
+    parse_definedmodification(parser, mod)
 
 Parse chain modification of defined or full structure level, eg ";2OH,3OH"
 """
-function parse_definedmodification(mod; onlinked = true)
+function parse_definedmodification(parser::LipidParser, mod; onlinked = true)
     FG_SP = onlinked ? FG : FG_CLINKED 
     ms = split_chainmodification_c(mod)
     if startswith(first(ms), r";\d")
@@ -191,7 +191,7 @@ function parse_definedmodification(mod; onlinked = true)
         isnothing(mm) && throw(ArgumentError("Invalid chain modification, \"$mod\""))
         v = isempty(v) ? string(mm...) : v
         v = replace(v, "(" => "\\(", ")" => "\\)", "[" => "\\[", "]" => "\\]")
-        c = parse_tailsubstituent(mm...; onlinked)
+        c = parse_tailsubstituent(parser, mm...; onlinked)
         m = match.(Regex(string("^[;,](\\d+)", v, "(?:\\[(\\d*)([RS]*)\\])*\$")), ms)
         any(isnothing, m) && throw(ArgumentError("Some chain modification does not have position, \"$mod\""))
         return [parse_structureposition(c, x) for x in m]
@@ -203,7 +203,7 @@ function parse_definedmodification(mod; onlinked = true)
         m = startswith(first(ms), ";(") ? match(r"^;\((C?[ON]?)\((.*)\)\)(\d*)$", first(ms)) : match(r"^;(C?[ON]?)\((.*)\)()$", first(ms)) 
         isnothing(m) && throw(ArgumentError("Invalid chain modification, \"$mod\""))
         l, fg, n = m
-        return [parse_tailsubstituent(l, fg) => (isempty(n) ? 0x01 : parse(UInt8, n))]
+        return [parse_tailsubstituent(parser, l, fg) => (isempty(n) ? 0x01 : parse(UInt8, n))]
     else
         throw(ArgumentError("Invalid chain modification, \"$mod\""))
     end

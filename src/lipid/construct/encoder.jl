@@ -32,11 +32,11 @@ function reorder_lipid_chains!(order, arrays...)
     end
 end
 
-# Chains with explicit positions are moved to the end, and the others keep their relative order
+# Chains with explicit positions are moved to the front, and the others keep their relative order
 function move_explicit_lipid_chains!(positions, arrays...)
     explicit = findall(is_explicit_sn, positions)
     isempty(explicit) && return explicit
-    order = vcat(setdiff!(collect(eachindex(positions)), explicit), explicit)
+    order = vcat(explicit, setdiff!(collect(eachindex(positions)), explicit))
     reorder_lipid_chains!(order, positions, arrays...)
     explicit
 end
@@ -48,9 +48,16 @@ function resolve_chain_order!(positions)
     positions[begin] = :inorder
 end
 
-function sort_explicit_lipid_chains!(values, explicit, arrays...)
-    isempty(explicit) && return
-    reorder_lipid_chains!(sortperm(values; alg = MergeSort), values, arrays...)
+function sort_explicit_lipid_chains!(values, explicit, chains, arrays...)
+    nexplicit = length(explicit)
+    comparable(i) = chains[i] isa CarbonChain
+    function lt(i, j)
+        (i <= nexplicit) != (j <= nexplicit) && return i <= nexplicit
+        values[i] != values[j] && return values[i] < values[j]
+        values[i] == 0x00 && comparable(i) && comparable(j) && return isless(chains[i], chains[j])
+        false
+    end
+    reorder_lipid_chains!(sortperm(eachindex(values); lt, alg = MergeSort), values, chains, arrays...)
 end
 
 # `positions` is either the merged code or position values of each chain

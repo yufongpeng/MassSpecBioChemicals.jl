@@ -9,7 +9,7 @@ make_lipid(Con::Type{<: FattyAcyl}, bone, pos, chain, sn) =
 function make_lipid(Con::Type{<: NacylAmine}, bone, pos, chain, sn)
     if bone isa Tuple
         if length(chain) == 1
-            hbone = parse_lipid("FN 0:0")
+            hbone = parse_lipid(LipidParser(), "FN 0:0")
             make_lipid(Con, check_structure!(Con, hbone, first(chain)))
         elseif length(chain) == nchainposition(Con)        
             bhead, bbone, bchain = bone
@@ -27,9 +27,9 @@ function make_lipid(Con::Type{<: FattyAcylEster}, bone, pos, chain, sn)
     bhead, bbone, bechain = bone
     if length(chain) == 1
         if bechain == (Acyl, )
-            hbone = parse_lipid("FA 0:0")
+            hbone = parse_lipid(LipidParser(), "FA 0:0")
         else
-            hbone = parse_lipid("FOH 0:0")
+            hbone = parse_lipid(LipidParser(), "FOH 0:0")
         end
         make_lipid(Con, check_structure!(Con, hbone, first(chain), sn))
     elseif length(chain) == nchainposition(Con)     

@@ -25,7 +25,7 @@ function decode_headgroup_position(::Type{T}, position, chirality) where {T <: S
         if iszero(p1) && iszero(p2)
             ""
         elseif iszero(p1) 
-            rc = repr_chirality(chirality; bracket = false)
+            rc = repr_chirality(last(chirality); bracket = false)
             string("(", p2, rc, ")") 
         else
             rc = repr_chirality.(chirality; bracket = false)

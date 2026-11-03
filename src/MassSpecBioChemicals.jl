@@ -6,9 +6,11 @@ using IterTools
 using MassSpecChemicals: 
     AbstractChemical, AttributedChemical, ChemicalAttribute, 
     pushchemicalattr_new!,
-    buildattribute
+    buildattribute,
+    safecopy, chemicalelements_equal, sort_unique_elements
     
-import Base: show, length
+import Base: show, length, ==, hash, copy
+
 import MassSpecChemicals: 
     chemicalname, chemicalformula, chemicalelements, chemicalabbr, chemicalsmiles, 
     pushchemicalattr!, defaultchemicalkwargs

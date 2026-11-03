@@ -276,6 +276,8 @@ function config_check_begin!(bone::B, chain::CarbonChain{<: AbstractSPB}, fg_all
     end
     if haskey(ch_all, 2) 
         first(fg_all[2]) == Hydrogen() || throw(ArgumentError("Position `2` cannot contain funtional group."))
+    else
+        push!(ch_all, 2 => RSChirality())
     end
     if haskey(ch_all, 1) 
         fg_check3(fg_all, 1)

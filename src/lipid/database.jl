@@ -65,7 +65,16 @@ end
 function to_update_LMSD(period::DatePeriod)
     mkpath(joinpath(@__DIR__(), "database"))
     dir = readdir(joinpath(@__DIR__(), "database"))
-    "status.txt" in dir || return true
+    if !in("status.txt", dir) 
+        if in("LMSD.sdf.zip", dir)
+            open(joinpath(@__DIR__(), "database", "status.txt"), "a") do f 
+                write(f, "\n", "LMSD\t", string(Dates.now()))
+            end
+            return false
+        else
+            return true 
+        end
+    end
     st = readlines(joinpath(@__DIR__(), "database", "status.txt"))
     i = findlast(x -> startswith(x, "LMSD\t"), st)
     isnothing(i) && return true 

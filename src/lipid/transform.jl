@@ -153,7 +153,7 @@ function dissociate_carbonchain_group(lipid::Glycerolipid; presserve_fg = true)
         2   => Diradylglycerol
         3   => Triradylglycerol
     end
-    dl = cls(lipid.backbone, chains, lipid.sn, lipid.chirality) 
+    dl = make_lipid(cls, (lipid.backbone, chains, lipid.sn, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -172,7 +172,7 @@ function _dissociate_carbonchain_group(lipid::Union{<: Glycerophospholipid, <: O
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
     chirality = first(tuplize(lipid.chirality))
     chirality = chirality == RChirality() ? SChirality() : chirality == SChirality() ? RChirality() : chirality
-    dl =  cls(last(getchaincomponent(lipid.backbone)), chains, UInt8(sum(sn .* ((nchainposition(cls) + 1) .^ ((n - 1):-1:0)))), chirality)
+    dl =  make_lipid(cls, (last(getchaincomponent(lipid.backbone)), chains, UInt8(sum(sn .* ((nchainposition(cls) + 1) .^ ((n - 1):-1:0)))), chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -193,7 +193,7 @@ function dissociate_carbonchain_group(lipid::Union{LysophosphatidylNmodifiedetha
             chain = lipid.chain
         end
         chains, fgs = dissociate_carbonchain_xlinkage(chain; presserve_fg)
-        dl = Diradylglycerol(last(getchaincomponent(lipid.backbone)), chains, UInt8(sum(sn .* (4 .^ (1:-1:0)))), first(tuplize(lipid.chirality)))
+        dl = make_lipid(Diradylglycerol, (last(getchaincomponent(lipid.backbone)), chains, UInt8(sum(sn .* (4 .^ (1:-1:0)))), first(tuplize(lipid.chirality))))
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
@@ -217,7 +217,7 @@ function dissociate_carbonchain_group(lipid::Union{PhosphatidylNmodifiedethanola
             chain = tuplize(lipid.chain)
         end
         chains, fgs = dissociate_carbonchain_xlinkage(chain; presserve_fg)
-        dl = Triradylglycerol(last(getchaincomponent(lipid.backbone)), length(chains) > 1 ? chains : first(chains), UInt8(sum(sn .* (4 .^ (2:-1:0)))), first(tuplize(lipid.chirality))) 
+        dl = make_lipid(Triradylglycerol, (last(getchaincomponent(lipid.backbone)), length(chains) > 1 ? chains : first(chains), UInt8(sum(sn .* (4 .^ (2:-1:0)))), first(tuplize(lipid.chirality)))) 
         presserve_fg || return dl => nothing
         d = Dict{AbstractChemical, UInt8}()
         push_dissociate_fg!(d, fgs)
@@ -239,7 +239,7 @@ function dissociate_carbonchain_group(lipid::Union{Bisradylglycerophosphate, Rad
         sn = UInt16(sum(sn .* (5 .^ ((length(sn) - 1):-1:0))))
     end
     todel = [length(lipid.backbone) - 2 * i + 1 for i in 1:(length(lipid.backbone) ÷ 2)]
-    dl = Radyldiglycerol(deletechemicalat(lipid.backbone, todel), chains, sn, lipid.chirality)
+    dl = make_lipid(Radyldiglycerol, (deletechemicalat(lipid.backbone, todel), chains, sn, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -250,7 +250,7 @@ function dissociate_carbonchain_group(lipid::Union{Bisradylglycerophosphate, Rad
 end
 function dissociate_carbonchain_group(lipid::Bisradylglycerophosphoglycerol; presserve_fg = true)
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = Radyltriglycerol(deletechemicalat(lipid.backbone, [2, 4]), chains, lipid.sn, lipid.chirality) 
+    dl = make_lipid(Radyltriglycerol, (deletechemicalat(lipid.backbone, [2, 4]), chains, lipid.sn, lipid.chirality)) 
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -261,7 +261,7 @@ function dissociate_carbonchain_group(lipid::Bisradylglycerophosphoglycerol; pre
 end
 function dissociate_carbonchain_group(lipid::GlycerophosphoNacylethanolamine; presserve_fg = true)
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = Monoradylglycerol(last(getchaincomponent(lipid.backbone)), chains, 0x01, AChirality())
+    dl = make_lipid(Monoradylglycerol, (last(getchaincomponent(lipid.backbone)), chains, 0x01, AChirality()))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -273,7 +273,7 @@ end
 
 function dissociate_carbonchain_group(lipid::CeramideBone; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = SphingoBone(nothing, chains, 0x00, lipid.chirality)
+    dl = make_lipid(SphingoBone, (nothing, chains, 0x00, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -281,7 +281,7 @@ function dissociate_carbonchain_group(lipid::CeramideBone; presserve_fg = true)
 end
 function dissociate_carbonchain_group(lipid::Sulfonolipid; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = SphingoBone(nothing, chains, 0x00, lipid.chirality)
+    dl = make_lipid(SphingoBone, (nothing, chains, 0x00, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -291,7 +291,7 @@ function dissociate_carbonchain_group(lipid::Sulfonolipid; presserve_fg = true)
 end
 function dissociate_carbonchain_group(lipid::SphingoBone; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = SphingoBone(nothing, chains, 0x00, lipid.chirality)
+    dl = make_lipid(SphingoBone, (nothing, chains, 0x00, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -301,7 +301,7 @@ function dissociate_carbonchain_group(lipid::SphingoBone; presserve_fg = true)
 end
 function dissociate_carbonchain_group(lipid::Lysosulfonolipid; presserve_fg = true) 
     chains, fgs = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
-    dl = SphingoBone(nothing, chains, 0x00, lipid.chirality)
+    dl = make_lipid(SphingoBone, (nothing, chains, 0x00, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, fgs)
@@ -314,7 +314,7 @@ end
 function dissociate_carbonchain_group(lipid::Acylceramide; presserve_fg = true) 
     chain1, fg1 = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
     chain2, fg2 = dissociate_carbonchain_xlinkage(lipid.headgroup.chain; presserve_fg)
-    dl = SphingoBone(MonoFattyAcyl(lipid.headgroup.backbone, chain2), chain1, lipid.position, lipid.chirality)
+    dl = make_lipid(SphingoBone, (MonoFattyAcyl(lipid.headgroup.backbone, chain2), chain1, lipid.position, lipid.chirality))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (tuplize(fg1)..., fg2))
@@ -323,7 +323,7 @@ end
 function dissociate_carbonchain_group(lipid::Acylsphingomyelin; presserve_fg = true) 
     chain1, fg1 = dissociate_carbonchain_xlinkage(lipid.chain; presserve_fg)
     chain2, fg2 = dissociate_carbonchain_xlinkage(first(lipid.headgroup).chain; presserve_fg)
-    dl = SphingoBone(MonoFattyAcyl(first(lipid.headgroup).backbone, chain2), chain1, first(lipid.position), first(lipid.chirality))
+    dl = make_lipid(SphingoBone, (MonoFattyAcyl(first(lipid.headgroup).backbone, chain2), chain1, first(lipid.position), first(lipid.chirality)))
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()
     push_dissociate_fg!(d, (tuplize(fg1)..., fg2))
@@ -334,9 +334,9 @@ function dissociate_carbonchain_group(lipid::MixSphingoBone; presserve_fg = true
     id = findall(x -> x isa MonoFattyAcyl, lipid.headgroup)
     chains, fgs = zip(dissociate_carbonchain_xlinkage.(lipid.headgroup[id]; presserve_fg)...)
     if length(id) > 1
-        dl = MixSphingoBone(chains, chain1, lipid.position[id], lipid.chirality[id])
+        dl = make_lipid(MixSphingoBone, (chains, chain1, lipid.position[id], lipid.chirality[id]))
     else
-        dl = SphingoBone(first(chains), chain1, lipid.position[first(id)], lipid.chirality[first(id)])
+        dl = make_lipid(SphingoBone, (first(chains), chain1, lipid.position[first(id)], lipid.chirality[first(id)]))
     end
     presserve_fg || return dl => nothing
     d = Dict{AbstractChemical, UInt8}()

@@ -1,7 +1,25 @@
-struct SaccharideParser{Bool} <: AbstractChemicalParser end
+"""
+    AbstractSaccharideParser{E}
+
+Parsers of saccharides. The type parameter `E` is `explicit_config`: if `true`, a monosaccharide without `D-`/`L-` prefix is parsed as `DLForm`.
+"""
+abstract type AbstractSaccharideParser{E} <: AbstractChemicalParser end
+"Parser for monosaccharide, e.g. `Glc`."
+struct MonosaccharideParser{E} <: AbstractSaccharideParser{E} end
+"Parser for glycan (monosaccharides and glycans connected by linkages), e.g. `Galβ-4Glc`."
+struct SaccharideParser{E} <: AbstractSaccharideParser{E} end
+"Parser for named series glycan, e.g. `GQ1bα(3[3]NeuGc)`."
+struct SeriesGlycanParser{E} <: AbstractSaccharideParser{E} end
+"Parser for glycan composition, e.g. `HexNAcHex3`."
+struct GlycompParser{E} <: AbstractSaccharideParser{E} end
+MonosaccharideParser(; explicit_config = false) = MonosaccharideParser{explicit_config}()
 SaccharideParser(; explicit_config = false) = SaccharideParser{explicit_config}()
-parse_chemical(::SaccharideParser{true}, x; kwargs...) = parse_glycan(x; explicit_config = true)
-parse_chemical(::SaccharideParser{false}, x; kwargs...) = parse_glycan(x)
+SeriesGlycanParser(; explicit_config = false) = SeriesGlycanParser{explicit_config}()
+GlycompParser(; explicit_config = false) = GlycompParser{explicit_config}()
+parse_chemical(p::MonosaccharideParser, x; kwargs...) = parse_monosaccharide(p, x)
+parse_chemical(p::SaccharideParser, x; kwargs...) = parse_glycan(p, x)
+parse_chemical(p::SeriesGlycanParser, x; kwargs...) = parse_series_glycan(p, x)
+parse_chemical(p::GlycompParser, x; kwargs...) = parse_glycomp(p, x)
 
 # specify num -> num
 # default 6 -> 1 === dehydrogen -> dehydroxy 

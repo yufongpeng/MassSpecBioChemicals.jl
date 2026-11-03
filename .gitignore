@@ -2,4 +2,4 @@
 *.jl.cov
 *.jl.mem
 /Manifest.toml
-/src/lipid/database
+/src/lipid/database/status.txt

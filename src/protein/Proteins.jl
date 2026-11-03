@@ -87,7 +87,8 @@ export AbstractPeptide,
 
        letter3_abbr,
        letter1_abbr,
-       alpha_rs
+       alpha_rs,
+       AminoAcidParser
 
 abstract type AbstractPeptide <: AttributedChemical end
 abstract type αAminoAcid{DL} <: AbstractPeptide end

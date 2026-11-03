@@ -98,13 +98,51 @@ end
 default_lipid_classabbr(::Type{<:FattyAcylCarnitine{B}}, backbone) where B =
     string(default_backbone_chirality_prefix(B), "CAR")
 
-function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Glycerolipid}
+function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Union{Glycerolipid, Glycerophospholipid}}
     string(default_lipid_chirality_prefix(chirality), default_achiral_lipid_classabbr(T, backbone))
 end
 default_lipid_classabbr(::Type{<:Radyldiglycerol}, backbone, chirality) = head_abbr(backbone)
 default_lipid_classabbr(::Type{<:Radyltriglycerol}, backbone, chirality) = head_abbr(backbone)
-function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Glycerophospholipid}
+function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Monoradylglycerophosphate}
+    replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(default_lipid_chirality_prefix(chirality), "LGP"))
+end
+function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Diradylglycerophosphate}
+    replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => string(default_lipid_chirality_prefix(chirality), "GP"))
+end
+function default_lipid_classabbr(::Type{T}, backbone, chirality) where {T <: Union{Phosphatidicacid, Phosphatidylcholine, Phosphatidylethanol, Phosphatidylethanolamine, Phosphatidylinositol, Phosphatidylmethanol, PhosphatidylNmethylethanolamine, PhosphatidylNmodifiedethanolamine, PhosphatidylNNdimethylethanolamine, Lysophosphatidicacid, Lysophosphatidylcholine, Lysophosphatidylethanol, Lysophosphatidylethanolamine, Lysophosphatidylinositol, Lysophosphatidylmethanol, LysophosphatidylNmethylethanolamine, LysophosphatidylNmodifiedethanolamine, LysophosphatidylNNdimethylethanolamine}}
     string(default_lipid_chirality_prefix(chirality), default_achiral_lipid_classabbr(T, backbone))
+end
+function default_lipid_classabbr(::Type{<:Omodifiedmonoradylglycerol}, backbone, chirality)
+    bone = getchaincomponent(backbone)
+    if length(bone) == 2 
+        b = parentchemical(first(bone))
+        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "SQMG")
+        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "MGMG")
+        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "GlcAMG")
+    elseif length(bone) == 3 
+        b = parentchemical(first(bone))
+        b2 = parentchemical(bone[begin + 1])
+        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "DGMG")
+    end
+    b = head_abbr(backbone)
+    l, r = match(r"(.*\d-)\d\(*[RS]*\)*-*Glycerol((?:\[[^-]\])?)", b)
+    string(l, default_lipid_chirality_prefix(chirality), "MG", r)
+end
+function default_lipid_classabbr(::Type{<:Omodifieddiradylglycerol}, backbone, chirality)
+    bone = getchaincomponent(backbone)
+    if length(bone) == 2 
+        b = parentchemical(first(bone))
+        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "SQDG")
+        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "MGDG")
+        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "GlcADG")
+    elseif length(bone) == 3 
+        b = parentchemical(first(bone))
+        b2 = parentchemical(bone[begin + 1])
+        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return string(default_lipid_chirality_prefix(chirality), "DGDG")
+    end
+    b = head_abbr(backbone)
+    l, r = match(r"(.*\d-)\d\(*[RS]*\)*-*Glycerol((?:\[[^-]\])?)", b)
+    string(l, default_lipid_chirality_prefix(chirality), "DG", r)
 end
 
 """
@@ -147,40 +185,39 @@ default_achiral_lipid_classabbr(::Type{<:Radyltriglycerol}, backbone) = head_abb
 #     replace(head_abbr(backbone), r"(.*-)\d*Glycerol((?:\[[^-]\])?)" => s"\1G\2")
 default_achiral_lipid_classabbr(::Type{T}, backbone) where {T <: Glycerolipid} =
     string(nameof(Base.typename(T).wrapper))
+# function default_achiral_lipid_classabbr(::Type{<:Omodifiedmonoradylglycerol}, backbone)
+#     bone = getchaincomponent(backbone)
+#     if length(bone) == 2 
+#         b = parentchemical(first(bone))
+#         b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "SQMG"
+#         b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return "MGMG"
+#         b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "GlcAMG"
+#     elseif length(bone) == 3 
+#         b = parentchemical(first(bone))
+#         b2 = parentchemical(bone[begin + 1])
+#         b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return "DGMG"
+#     end
+#     b = head_abbr(backbone)
+#     l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
+#     string(l, "MG", r)
+# end
 
-function default_achiral_lipid_classabbr(::Type{<:Omodifiedmonoradylglycerol}, backbone)
-    bone = getchaincomponent(backbone)
-    if length(bone) == 2 
-        b = parentchemical(first(bone))
-        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "SQMG"
-        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return "MGMG"
-        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "GlcAMG"
-    elseif length(bone) == 3 
-        b = parentchemical(first(bone))
-        b2 = parentchemical(bone[begin + 1])
-        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return "DGMG"
-    end
-    b = head_abbr(backbone)
-    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
-    string(l, "MG", r)
-end
-
-function default_achiral_lipid_classabbr(::Type{<:Omodifieddiradylglycerol}, backbone)
-    bone = getchaincomponent(backbone)
-    if length(bone) == 2 
-        b = parentchemical(first(bone))
-        b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "SQDG"
-        b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return "MGDG"
-        b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "GlcADG"
-    elseif length(bone) == 3 
-        b = parentchemical(first(bone))
-        b2 = parentchemical(bone[begin + 1])
-        b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return "DGDG"
-    end
-    b = head_abbr(backbone)
-    l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
-    string(l, "DG", r)
-end
+# function default_achiral_lipid_classabbr(::Type{<:Omodifieddiradylglycerol}, backbone)
+#     bone = getchaincomponent(backbone)
+#     if length(bone) == 2 
+#         b = parentchemical(first(bone))
+#         b isa Quinovose{DForm, PyranoseForm} && b.substituent == [0x06 => Sulfo()] && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "SQDG"
+#         b isa Galactose{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [β(0x01) => lk(0x03)] && return "MGDG"
+#         b isa GlucuronicAcid{DForm, PyranoseForm} && isnothing(b.substituent) && getchainlinkage(backbone) == [α(0x01) => lk(0x03)] && return "GlcADG"
+#     elseif length(bone) == 3 
+#         b = parentchemical(first(bone))
+#         b2 = parentchemical(bone[begin + 1])
+#         b isa Galactose{DForm, PyranoseForm} && b2 isa Galactose{DForm, PyranoseForm} && getchainlinkage(backbone) == [α(0x01) => lk(0x06), β(0x01) => lk(0x03)] && return "DGDG"
+#     end
+#     b = head_abbr(backbone)
+#     l, r = match(r"(.*-)\d*Glycerol((?:\[[^-]\])?)", b)
+#     string(l, "DG", r)
+# end
 
 default_achiral_lipid_classabbr(::Type{<:Lysophosphatidicacid}, backbone) = "LPA"
 default_achiral_lipid_classabbr(::Type{<:Phosphatidicacid}, backbone) = "PA"
@@ -220,10 +257,10 @@ default_achiral_lipid_classabbr(::Type{<:Lysophosphatidylinositol}, backbone) =
     _inositolphospholipid_classabbr("LPI", "LPIP", backbone)
 default_achiral_lipid_classabbr(::Type{<:Phosphatidylinositol}, backbone) =
     _inositolphospholipid_classabbr("PI", "PIP", backbone)
-default_achiral_lipid_classabbr(::Type{<:Monoradylglycerophosphate}, backbone) =
-    replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => "LGP")
-default_achiral_lipid_classabbr(::Type{<:Diradylglycerophosphate}, backbone) =
-    replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => "GP")
+# default_achiral_lipid_classabbr(::Type{<:Monoradylglycerophosphate}, backbone) =
+#     replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => "LGP")
+# default_achiral_lipid_classabbr(::Type{<:Diradylglycerophosphate}, backbone) =
+#     replace(head_abbr(backbone), r"P-\d*\(*[RS]*\)*-*Glycerol[^-]*-*$" => "GP")
 default_achiral_lipid_classabbr(::Type{<:GlycerophosphoNacylethanolamine}, backbone) = "GP-NAE"
 default_achiral_lipid_classabbr(::Type{T}, backbone) where {T <: Glycerophospholipid} =
     string(nameof(Base.typename(T).wrapper))

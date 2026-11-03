@@ -1,6 +1,20 @@
-struct LipidParser <: AbstractChemicalParser end
+"""
+    LipidParser(; explicit_config = false)
 
-parse_chemical(::LipidParser, x; kwargs...) = parse_lipid(x; kwargs...)
+Lipid parser storing the saccharide parsers required for parsing headgroups, tailgroups and glycan-derived lipid classes.
+"""
+struct LipidParser <: AbstractChemicalParser
+    monosaccharide::MonosaccharideParser
+    seriesglycan::SeriesGlycanParser
+    glycomp::GlycompParser
+end
+LipidParser(; explicit_config = false) = LipidParser(
+    MonosaccharideParser(; explicit_config), 
+    SeriesGlycanParser(; explicit_config), 
+    GlycompParser(; explicit_config)
+)
+
+parse_chemical(p::LipidParser, x; kwargs...) = parse_lipid(p, x; kwargs...)
 
 chemicalname(m::Lipid; kwargs...) = m.name
 chemicalelements(m::Lipid; kwargs...) = m.elements

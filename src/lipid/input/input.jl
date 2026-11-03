@@ -1,6 +1,9 @@
 include("class_struct.jl")
 
-function parse_lipid(s::AbstractString; kwargs...)
+# Class structures that parse saccharides take the parser as the first argument
+parse_lipid(s::AbstractString; kwargs...) = parse_lipid(LipidParser(), s; kwargs...)
+
+function parse_lipid(parser::LipidParser, s::AbstractString; kwargs...)
     # try 
         if any(==(s), SPECIFIC_LIPID) 
             lipid =  parse_specific(s)
@@ -21,9 +24,9 @@ function parse_lipid(s::AbstractString; kwargs...)
         pre = isnothing(pre) ? nothing : isempty(pre) ? nothing : pre
         post = isnothing(post) ? nothing : isempty(post) ? nothing : post
         parse_head = get(CLASS_STRUCT, cls, nothing)
-        Con, bone, echain = parse_head(head, pre, cls, post, pos, sil)
+        Con, bone, echain = parse_head(parser, head, pre, cls, post, pos, sil)
         # Con <: lipidtype || throw(ArgumentError("The input string cannot be parsed as `$lipidtype`"))
-        chain, sn = parse_carbonchain(Con, bone, echain, schain)
+        chain, sn = parse_carbonchain(parser, Con, bone, echain, schain)
         pos = parse_headposition(Con, bone, pos)
         make_lipid(Con, bone, pos, chain, sn)
     # catch e 

@@ -39,8 +39,27 @@ s = "FAM 19:2(3Z,15Z);18oxo;18NH2;10OH" # X
 s = "FA 24:1-ASM 18:1(4E);3OH/24:1(15Z)"
 s = "L-NASer 19:2(3Z,16Z);19CO(L-Ser);9OH[R],10OH[R],11OH[R]"
 s = "Glcβ-SPB(1) 18:1(4E);3OH[S];2H[R]"
+s = "DL-Glcβ-SPB(1) 18:1(4E);3OH[S];2H[R]"
 s = "HexCer 18:1;O2/24:1"
-lipid = MBL.parse_lipid(s)
+s = "Hex-Hex-Cer 18:1;O2/24:1"
+s = "D-Glcβ-DG 16:0/20:4(5Z,8Z,11Z,14Z)"
+s = "SPBP(1,3R) 18:1(4E);2H[R]"
+s = "SPBP(1,3R) 18:1(4E)"
+s = "D-Gal2D-GlcD-GlcNAcCer 18:1(4E);3OH/24:1(15Z)"
+s = "TG 18:1(9Z)/18:1(16);17Me/20:0"
+s = "TG 18:1(16);17Me_18:1(9Z)_20:0(sn-1)"
+s = "TG 18:2(5,16);17Me_18:1(16Z)_20:0(sn-1)"
+s = "TG 18:2(5,16);17Me_18:2(5,16);5Me_20:0(sn-1)"
+s = "TG 18:2(5,16);10Me_18:2(5,16);10Me[R]_20:0(sn-1)"
+s = "TG 18:2(5,16);9OH;10Me_18:2(5,16);10Me[R],11Me_20:0(sn-1)"
+s = "TG 18:2(5,16);9OH;10Me_18:2(5,16);Me2_20:0(sn-1)"
+s = "BPA 16:0(sn-2)_20:0(sn-3')_40:4"
+
+lipid = parse_chemical(LipidParser(), s)
+lipid2 = parse_chemical(LipidParser(), s)
+lipid = parse_chemical(LipidParser(; explicit_config = true), s)
+parse_chemical(LipidParser(), s) == parse_chemical(LipidParser(), s)
+
 MBL.annotationlevel(lipid)
 chemicalsmiles(lipid; onlycarbonchain = true)
 
@@ -51,10 +70,11 @@ for (c, s) in test_lipid_js
     for (l, a) in s
         l = string(l)
         print(l, " -- ")
-        lipid = MBL.parse_lipid(l)
+        lipid = parse_chemical(LipidParser(), l)
         show(lipid)
+        first(a) == chemicalname(lipid) || println("\n---------", first(a))
         println()
-        push!(dict, l => (object = lipid, annotationlevel = [eval(Meta.parse(aa)) for aa in a]))
+        push!(dict, l => (object = lipid, name = first(a), annotationlevel = [eval(Meta.parse(aa)) for aa in last(a)]))
     end
     push!(test_lipid, eval(c) => dict)
 end
@@ -81,30 +101,30 @@ show_error(Glycerophospholipid)
 all(test_annotationlevel(x) for (k, x) in test_lipid[Sphingolipid])
 show_error(Sphingolipid)
 
-chemicalsmiles(parse_lipid("DG 18:1(9Z)/18:1(16);17Me/0:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("DG P-18:1(9Z);11oxo;12Ep;13OO/18:1(2Z);2OH;10OMe;18COOH/0:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("DG O-18:1(9Z);2oxy;11oxo;12Ep;13H[R]/18:0;2OH;10OFo;18COCl/0:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("Cer 18:1(4E);1OH,3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("Glc-Cer(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("FA 10:0-ACer(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("SM(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("PC 18:1(9Z)/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("(S)-PG 18:1(9Z)/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("LPC 0:0/18:1(16);17Me"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("FA 18:1(9Z)"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("FA 18:1(9Z)"))
-chemicalsmiles(parse_lipid("FN 18:1(9Z)"))
-chemicalsmiles(parse_lipid("FAM 18:1(9Z)"))
-chemicalsmiles(parse_lipid("FOH 18:1(1Z)"))
-chemicalsmiles(parse_lipid("FAHFA 18:1(4E)/5O(FA 18:0)"))
-chemicalsmiles(parse_lipid("WE 18:1(1Z)/18:0"))
-chemicalsmiles(parse_lipid("NA 18:1(1Z)/18:0"))
-chemicalsmiles(parse_lipid("NASer 18:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("NAE 18:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("CAR 18:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("GP-NAE 18:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("(R,S')-LBPA 18:0/0:0/16:0/0:0"); onlycarbonchain = true)
-chemicalsmiles(parse_lipid("(R,S',R'')-MLCL 16:0/20:4(5Z,8Z,11Z,14Z)/18:0/0:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("DG 18:1(9Z)/18:1(16);17Me/0:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("DG P-18:1(9Z);11oxo;12Ep;13OO/18:1(2Z);2OH;10OMe;18COOH/0:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("DG O-18:1(9Z);2oxy;11oxo;12Ep;13H[R]/18:0;2OH;10OFo;18COCl/0:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("Cer 18:1(4E);1OH,3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("Glc-Cer(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("FA 10:0-ACer(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("SM(1) 18:1(4E);3OH;2H[R]/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("PC 18:1(9Z)/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("(S)-PG 18:1(9Z)/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("LPC 0:0/18:1(16);17Me"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("FA 18:1(9Z)"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("FA 18:1(9Z)"))
+chemicalsmiles(MBL.parse_lipid("FN 18:1(9Z)"))
+chemicalsmiles(MBL.parse_lipid("FAM 18:1(9Z)"))
+chemicalsmiles(MBL.parse_lipid("FOH 18:1(1Z)"))
+chemicalsmiles(MBL.parse_lipid("FAHFA 18:1(4E)/5O(FA 18:0)"))
+chemicalsmiles(MBL.parse_lipid("WE 18:1(1Z)/18:0"))
+chemicalsmiles(MBL.parse_lipid("NA 18:1(1Z)/18:0"))
+chemicalsmiles(MBL.parse_lipid("NASer 18:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("NAE 18:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("CAR 18:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("GP-NAE 18:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("(R,S')-LBPA 18:0/0:0/16:0/0:0"); onlycarbonchain = true)
+chemicalsmiles(MBL.parse_lipid("(R,S',R'')-MLCL 16:0/20:4(5Z,8Z,11Z,14Z)/18:0/0:0"); onlycarbonchain = true)
 
 for (k, v) in test_lipid[FattyAcyl]
     print(k, " -- ")

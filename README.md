@@ -7,55 +7,55 @@ MassSpecBioChemicals.jl is package for representation of biochemicals with four 
 
 ## Lipids
 ### Input
-Standard lipid nomenclatures are used in this package; other lipids formats are currently not supported.
+Standard lipid nomenclatures are used in this package; other lipids formats are currently not supported[1]. Nomenclatures for glycans are mainly based on the Symbol Nomenclature For Glycans (SNFG) guidline[2].
 ```julia
 julia> using MassSpecBioChemicals
        using MassSpecBioChemicals.Lipids
        const MBL = MassSpecBioChemicals.Lipids
 MassSpecBioChemicals.Lipids
 
-julia> fahfa = MBL.parse_lipid("FAHFA 18:1(4E)/5O(FA 18:0)")
+julia> fahfa = parse_chemical(LipidParser(), "FAHFA 18:1(4E)/5O(FA 18:0)")
 FAHFA 18:1(4E)/5O(FA 18:0)
 
-julia> naser = MBL.parse_lipid("L-NASer 19:2(3Z,16Z);19CO(L-Ser-L-Ala);9OH[R],10OH[R],11OH[R]")
+julia> naser = parse_chemical(LipidParser(), "L-NASer 19:2(3Z,16Z);19CO(L-Ser-L-Ala);9OH[R],10OH[R],11OH[R]")
 L-NASer 19:2(3Z,16Z);19CO(L-Ser-L-Ala);9OH[R],10OH,11OH[R]
 
-julia> fam = MBL.parse_lipid("FAM 19:2(3Z,16Z);19CONH2;9OH,10OH,11OH")
+julia> fam = parse_chemical(LipidParser(), "FAM 19:2(3Z,16Z);19CONH2;9OH,10OH,11OH")
 FAM 19:2(3Z,16Z);19CONH2;9OH,10OH,11OH
 
-julia> pc = MBL.parse_lipid("PC 18:1(2E);3OH/18:1(15)")
+julia> pc = parse_chemical(LipidParser(), "PC 18:1(2E);3OH/18:1(15)")
 PC 18:1(2E);3OH/18:1(15)
 
-julia> pip2 = MBL.parse_lipid("PIP2(4',5') 20:4(5Z,8Z,11Z,14Z)/16:0")
+julia> pip2 = parse_chemical(LipidParser(), "PIP2(4',5') 20:4(5Z,8Z,11Z,14Z)/16:0")
 PIP2(4',5') 20:4(5Z,8Z,11Z,14Z)/16:0
 
-julia> cl = MBL.parse_lipid("CL 16:0(sn-1)_20:0(sn-2')_40:4")
+julia> cl = parse_chemical(LipidParser(), "CL 16:0(sn-1)_20:0(sn-2')_40:4")
 CL 40:4_16:0(sn-1)_20:0(sn-2')
 
-julia> pen = MBL.parse_lipid("PE-N(FA 18:1(12Z)) 20:4(5Z,8Z,11Z,14Z)/16:0")
+julia> pen = parse_chemical(LipidParser(), "PE-N(FA 18:1(12Z)) 20:4(5Z,8Z,11Z,14Z)/16:0")
 PE-N(FA 18:1(12Z)) 20:4(5Z,8Z,11Z,14Z)/16:0
 
-julia> gsl = MBL.parse_lipid("Galβ-3GalNAcβ-4[Neu5Acα-3]D-Galβ-4Glcβ-Cer(1) 18:1(4E);3OH[S];2H[R]/24:1(15Z)")
+julia> gsl = parse_chemical(LipidParser(), "Galβ-3GalNAcβ-4[Neu5Acα-3]D-Galβ-4Glcβ-Cer(1) 18:1(4E);3OH[S];2H[R]/24:1(15Z)")
 D-Galβ1-3D-GalNAcβ1-4[Neu5Acα1-3]D-Galβ1-4D-Glcβ1-Cer(1) 18:1(4E);2H[R];3OH[S]/24:1(15Z)
 
-julia> gq1 = MBL.parse_lipid("GQ1bα(1) 18:1(4E);3OH[S];2H[R]/24:1(15Z)")
+julia> gq1 = parse_chemical(LipidParser(), "GQ1bα(1) 18:1(4E);3OH[S];2H[R]/24:1(15Z)")
 GQ1bα(1) 18:1(4E);2H[R];3OH[S]/24:1(15Z)
 
-julia> acer = MBL.parse_lipid("FA 24:1(15)-ACer(1) 18:1(4E);3OH[R];2H[R]/24:1(15Z)")
+julia> acer = parse_chemical(LipidParser(), "FA 24:1(15)-ACer(1) 18:1(4E);3OH[R];2H[R]/24:1(15Z)")
 FA 24:1(15)-ACer(1) 18:1(4E);2H[R];3OH[R]/24:1(15Z)
 
 ```
 The function checks the number and position of functional groups and double bond, as well as chirality. 
 ```julia
-julia> MBL.parse_lipid("LPC 18:1(1)")
+julia> parse_chemical(LipidParser(), "LPC 18:1(1)")
 ERROR: ArgumentError: Position `1` cannot contain double bond.
 …
 
-julia> MBL.parse_lipid("LPC 18:1(2);18oxo;18COOH")
+julia> parse_chemical(LipidParser(), "LPC 18:1(2);18oxo;18COOH")
 ERROR: ArgumentError: Too many functional groups at position `18`.
 …
 
-julia> MBL.parse_lipid("LPC 18:2(3,3)")
+julia> parse_chemical(LipidParser(), "LPC 18:2(3,3)")
 ERROR: ArgumentError: Multiple doublebond at position `3`.
 …
 
@@ -69,52 +69,52 @@ ERROR: ArgumentError: Multiple doublebond at position `3`.
 |Fatty acyl|FOH|||Fatty alcohol|FOH 16:0|
 |Fatty acyl|FN|||Fatty amine|FN 18:0|
 |Fatty acyl|FAM|||Fatty amide|FAM 16:0|
-|Fatty acyl|CAR|LD or RS||Acylcarnitine|(R)-CAR 18:0"|
+|Fatty acyl|CAR|L, D, (R), (S)||Acylcarnitine|(R)-CAR 18:0|
 |Fatty acyl|CoA|||Acyl Coenzyme A|CoA 16:0|
-|Fatty acyl|NA[AA]|LD or RS||Nacylaminoacid|L-NASer 16:0|
+|Fatty acyl|NA[AA]|L, D, (R), (S)||Nacylaminoacid|L-NASer 16:0|
 |Fatty acyl|NAE|||Nacylethanolamine|NAE 18:0|
 |Fatty acyl|NAT|||Nacyltaurine|NAT 16:0|
 |Fatty acyl|WE|||Wax ester|WE 16:0/18:0|
 |Fatty acyl|NA|||Nacylalkylamine|NA 16:0/18:0|
 |Fatty acyl|FAHFA|||Fatty acyl estolid|FAHFA 20:4/7O(FA 16:0)|
-|Glycerolipid|MG|Glycan-RS||Monoradylglycerol and its derivative|MG 16:0/0:0/0:0|
-|Glycerolipid|DG|Glycan-RS||Diradylglycerol and its derivative|Glcβ-(R)-DG 16:0_18:0|
-|Glycerolipid|TG|RS||Triradylglycerol|TG 16:0_18:0_20:1(sn-1)|
-|Glycerolipid|SQMG|RS||Sulfoquinovosylmonoradylglycerol|SQMG 16:0|
-|Glycerolipid|SQDG|RS||Sulfoquinovosyldiradylglycerol|SQDG 16:0/18:0|
-|Glycerolipid|MGMG|RS||Monogalactosylmonoradylglycerol|MGMG 16:0|
-|Glycerolipid|MGDG|RS||Monogalactosyldiradylglycerol|MGDG 16:0/18:0|
-|Glycerolipid|DGMG|RS||Digalactosylmonoradylglycerol|DGMG 16:0|
-|Glycerolipid|DGDG|RS||Digalactosyldiradylglycerol|DGDG 16:0/18:0|
-|Glycerolipid|GlcAMG|RS||Glucuronosylmonoradylglycerol|GlcAMG 16:0|
-|Glycerolipid|GlcADG|RS||Glucuronosyldiradylglycerol|GlcADG 16:0/18:0|
-|Glycerophospholipid|GP|Headgroup-RS||Glycerophospholipid|D-Glcβ-(R)-GP 18:0/16:0|
-|Glycerophospholipid|PA|RS||Phosphatidic acid|PA 16:0/18:0|
-|Glycerophospholipid|PC|RS||Phosphatidylcholine|(R)-PC O-16:0/18:0|
-|Glycerophospholipid|PE|RS||Phosphatidylethanolamine|PE P-16:0/18:0|
-|Glycerophospholipid|PS|RS-LD||Phosphatidylserine|(S)-L-PS 16:0/18:0|
-|Glycerophospholipid|PI|RS||Phosphatidylinositol|PI 16:0_18:0|
-|Glycerophospholipid|PG|RS||Phosphatidylglycerol|(R,R')-PG 16:0/18:0|
-|Glycerophospholipid|PGP|RS||Phosphatidylglycerol phophate|PGP 16:0/18:0|
-|Glycerophospholipid|PMeOH|RS||Phosphatidylmethanol|PMeOH 16:0_18:0|
-|Glycerophospholipid|PEtOH|RS||Phosphatidylethanol|PEtOH 16:0_18:0|
-|Glycerophospholipid|PIP|RS|Phosphoryl position|Phosphatidylinositol phosphate|PIP(3') 20:4;O_16:0|
-|Glycerophospholipid|PIP2|RS|Phosphoryl position|Phosphatidylinositol diphosphate|PIP2(3',4') 20:4;O_16:0|
-|Glycerophospholipid|PIP3|RS|Phosphoryl position|Phosphatidylinositol triphosphate|PIP3(3',4', 5') 20:4;O_16:0|
-|Glycerophospholipid|PE-N|RS|Fatty acyl|N-modified phosphatidylethanolamine|PE-N(FA 18:0) 16:0/20:4|
-|Glycerophospholipid|PE-NMe|RS||N-methyl phosphatidylethanolamine|PE-NMe 16:0/18:0|
-|Glycerophospholipid|PE-NMe2|RS||N,N-dimethyl phosphatidylethanolamine|PE-NMe2 16:0/18:0|
-|Glycerophospholipid|PS-N|RS-LD|Fatty acyl|N-modified phosphatidylserine|PS-N(18:0) 16:0/18:0|
-|Glycerophospholipid|PS-NMe|RS-LD||N-methyl phosphatidylserine|PS-N(FA 16:0) 18:0/16:0|
-|Glycerophospholipid|PS-NMe2|RS-LD||N,N-dimethyl phosphatidylserine|PS-N(FA 16:0) 18:0/16:0|PS-N(FA 16:0) 18:0/22:2|
-|Glycerophospholipid|L[GP]|RS-LD||Lysopholipid|(S)-L-LPS-NMe2 16:0/0:0|
-|Glycerophospholipid|BPA|RS||Bisphosphatidic acid|(R,R')-BPA 16:0/18:0/18:0/16:0|
-|Glycerophospholipid|SLBPA|RS||Semilysobisphosphatidic acid|(R,R')-SLBPA 16:0/18:0/0:0/16:0|
-|Glycerophospholipid|LBPA|RS||Lysobisphosphatidic acid|(R,R')-BPA 16:0/0:0/0:0/16:0|
-|Glycerophospholipid|CL|RS||Cardiolipin|(R,S',R'')-CL 16:0/18:0/18:0/16:0|
-|Glycerophospholipid|MLCL|RS||Monolysocardiolipin|(R,S',R'')-MLCL 16:0/18:0/18:0/0:0|
-|Glycerophospholipid|DLCL|RS||Dilysocardiolipin|(R,S',R'')-DLCL 0:0/18:0/18:0/0:0|
-|Glycerophospholipid|GP-NAE|RS||Glycerophosphaethanolamine|GP-NAE 16:0|
+|Glycerolipid|MG|Glycan-Glycerol chirality||Monoradylglycerol and its derivative|MG 16:0/0:0/0:0|
+|Glycerolipid|DG|Glycan-Glycerol chirality||Diradylglycerol and its derivative|Glcβ-(R)-DG 16:0_18:0|
+|Glycerolipid|TG|Glycerol chirality||Triradylglycerol|TG 16:0_18:0_20:1(sn-1)|
+|Glycerolipid|SQMG|Glycerol chirality||Sulfoquinovosylmonoradylglycerol|SQMG 16:0|
+|Glycerolipid|SQDG|Glycerol chirality||Sulfoquinovosyldiradylglycerol|SQDG 16:0/18:0|
+|Glycerolipid|MGMG|Glycerol chirality||Monogalactosylmonoradylglycerol|MGMG 16:0|
+|Glycerolipid|MGDG|Glycerol chirality||Monogalactosyldiradylglycerol|MGDG 16:0/18:0|
+|Glycerolipid|DGMG|Glycerol chirality||Digalactosylmonoradylglycerol|DGMG 16:0|
+|Glycerolipid|DGDG|Glycerol chirality||Digalactosyldiradylglycerol|DGDG 16:0/18:0|
+|Glycerolipid|GlcAMG|Glycerol chirality||Glucuronosylmonoradylglycerol|GlcAMG 16:0|
+|Glycerolipid|GlcADG|Glycerol chirality||Glucuronosyldiradylglycerol|GlcADG 16:0/18:0|
+|Glycerophospholipid|GP|Headgroup-Glycerol chirality||Glycerophospholipid|D-Glcβ-(R)-GP 18:0/16:0|
+|Glycerophospholipid|PA|Glycerol chirality||Phosphatidic acid|PA 16:0/18:0|
+|Glycerophospholipid|PC|Glycerol chirality||Phosphatidylcholine|(R)-PC O-16:0/18:0|
+|Glycerophospholipid|PE|Glycerol chirality||Phosphatidylethanolamine|PE P-16:0/18:0|
+|Glycerophospholipid|PS|Glycerol chirality-Serine chirality||Phosphatidylserine|(S)-L-PS 16:0/18:0|
+|Glycerophospholipid|PI|Glycerol chirality||Phosphatidylinositol|PI 16:0_18:0|
+|Glycerophospholipid|PG|Glycerol chirality||Phosphatidylglycerol|(R,R')-PG 16:0/18:0|
+|Glycerophospholipid|PGP|Glycerol chirality||Phosphatidylglycerol phophate|PGP 16:0/18:0|
+|Glycerophospholipid|PMeOH|Glycerol chirality||Phosphatidylmethanol|PMeOH 16:0_18:0|
+|Glycerophospholipid|PEtOH|Glycerol chirality||Phosphatidylethanol|PEtOH 16:0_18:0|
+|Glycerophospholipid|PIP|Glycerol chirality|Phosphoryl position|Phosphatidylinositol phosphate|PIP(3') 20:4;O_16:0|
+|Glycerophospholipid|PIP2|Glycerol chirality|Phosphoryl position|Phosphatidylinositol diphosphate|PIP2(3',4') 20:4;O_16:0|
+|Glycerophospholipid|PIP3|Glycerol chirality|Phosphoryl position|Phosphatidylinositol triphosphate|PIP3(3',4', 5') 20:4;O_16:0|
+|Glycerophospholipid|PE-N|Glycerol chirality|Fatty acyl|N-modified phosphatidylethanolamine|PE-N(FA 18:0) 16:0/20:4|
+|Glycerophospholipid|PE-NMe|Glycerol chirality||N-methyl phosphatidylethanolamine|PE-NMe 16:0/18:0|
+|Glycerophospholipid|PE-NMe2|Glycerol chirality||N,N-dimethyl phosphatidylethanolamine|PE-NMe2 16:0/18:0|
+|Glycerophospholipid|PS-N|Glycerol chirality-Serine chirality|Fatty acyl|N-modified phosphatidylserine|PS-N(18:0) 16:0/18:0|
+|Glycerophospholipid|PS-NMe|Glycerol chirality-Serine chirality||N-methyl phosphatidylserine|PS-N(FA 16:0) 18:0/16:0|
+|Glycerophospholipid|PS-NMe2|Glycerol chirality-Serine chirality||N,N-dimethyl phosphatidylserine|PS-N(FA 16:0) 18:0/16:0|PS-N(FA 16:0) 18:0/22:2|
+|Glycerophospholipid|L[GP]|Glycerol chirality-Serine chirality||Lysopholipid|(S)-L-LPS-NMe2 16:0/0:0|
+|Glycerophospholipid|BPA|Glycerol chirality||Bisphosphatidic acid|(R,R')-BPA 16:0/18:0/18:0/16:0|
+|Glycerophospholipid|SLBPA|Glycerol chirality||Semilysobisphosphatidic acid|(R,R')-SLBPA 16:0/18:0/0:0/16:0|
+|Glycerophospholipid|LBPA|Glycerol chirality||Lysobisphosphatidic acid|(R,R')-BPA 16:0/0:0/0:0/16:0|
+|Glycerophospholipid|CL|Glycerol chirality||Cardiolipin|(R,S',R'')-CL 16:0/18:0/18:0/16:0|
+|Glycerophospholipid|MLCL|Glycerol chirality||Monolysocardiolipin|(R,S',R'')-MLCL 16:0/18:0/18:0/0:0|
+|Glycerophospholipid|DLCL|Glycerol chirality||Dilysocardiolipin|(R,S',R'')-DLCL 0:0/18:0/18:0/0:0|
+|Glycerophospholipid|GP-NAE|Glycerol chirality||Glycerophosphaethanolamine|GP-NAE 16:0|
 |Sphingolipid|SPB|Headgroup|Headgroup position|Sphingoid base and its derivative|PI-SPB(1) 18:1(4E);3OH|
 |Sphingolipid|Cer|Headgroup|Headgroup position|Ceramide and its derivative|Glcβ-Cer(1) 18:1(4E);3OH/18:0|
 |Sphingolipid|SPBP|Headgroup|Headgroup position|Sphingoid base- phosphate|SPBP(1,3R) 18:1(4E);2H[R]
@@ -177,6 +177,9 @@ ERROR: ArgumentError: Multiple doublebond at position `3`.
 |Sphingolipid|SB1||Headgroup position|Sulfatide|SB1b(1) 18:1(4E);3OH/18:0|
 |Sphingolipid|L[SP]||Headgroup position|Lysosphingolipid|LGM3(1) 18:1(4E);3OH|
 
+* Glycerol chirality can only use R/S System.
+* Serine chirality can only use D/L System.
+
 ### Annotation Level
 ```julia
 julia> MBL.annotationlevel(naser)
@@ -233,7 +236,10 @@ julia> chemicalsmiles(acer; onlycarbonchain = true)
 ""
 
 ```
+### Database
+This package includes LMSD database from LIPID MAPS[3].
 
 ## Reference
 1. G. Liebisch, E. Fahy, J. Aoki, E.A. Dennis, T. Durand, C.S. Ejsing, M. Fedorova, I. Feussner, W.J. Griffiths, H. Kofeler, A.H. Merrill Jr., R.C. Murphy, V.B. O'Donnell, O. Oskolkova, S. Subramaniam, et al. Update on LIPID MAPS classification, nomenclature, and shorthand notation for MS-derived lipid structures, J. Lipid Res., 61 (2020), pp. 1539-1555
 2. Neelamegham S, Aoki-Kinoshita K, Bolton E, Frank M, Lisacek F, Lütteke T, et al. Updates to the symbol nomenclature for Glycans guidelines. Glycobiology. 2019; 29: 620–624.
+3. LIPID MAPS: update to databases and tools for the lipidomics community, Conroy MJ, Andrews RM, Andrews S, Cockayne L, Dennis, EA, Fahy E, Gaud C, Griffiths WJ, Jukes G, Kolchin M, Mendivelso K, Lopez-Clavijo AF, Ready C, Subramaniam S, O'Donnell, VB, Nucleic Acids Research, 2023, DOI: 10.1093/nar/gkad896 , PMID: 37855672

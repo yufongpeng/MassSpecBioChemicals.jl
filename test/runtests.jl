@@ -32,19 +32,32 @@ end
                     dict = Dict{String, Any}()
                     for (l, a) in s
                         l = string(l)
-                        lipid = MBL.parse_lipid(l)
-                        @test @test_noerror test_show(lipid)
-                        push!(dict, l => (object = lipid, annotationlevel = [eval(Meta.parse(aa)) for aa in a]))
+                        lipid = parse_chemical(LipidParser(), l)
+                        @test chemicalname(lipid) == first(a)
+                        push!(dict, l => (object = lipid, annotationlevel = [eval(Meta.parse(aa)) for aa in last(a)]))
                     end
                     push!(test_lipid, eval(c) => dict)
                 end
             end
         end
+        @testset "base" begin 
+            for (c, d) in test_lipid
+                @testset "$c" begin
+                    for (k, x) in d
+                        @test copy(x.object) == x.object
+                        @test hash(x.object) == hash(deepcopy(x.object))
+                    end
+                end
+            end
+        end
         @testset "annotationlevel" begin
-            @test all(test_annotationlevel(x) for (k, x) in test_lipid[FattyAcyl])
-            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Glycerolipid])
-            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Glycerophospholipid])
-            @test all(test_annotationlevel(x) for (k, x) in test_lipid[Sphingolipid])
+            for (c, d) in test_lipid
+                @testset "$c" begin
+                    for (k, x) in d
+                        @test test_annotationlevel(x)
+                    end
+                end
+            end
         end
         @testset "SMILES" begin 
             for (c, d) in test_lipid

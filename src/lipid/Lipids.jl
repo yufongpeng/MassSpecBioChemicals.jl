@@ -2,8 +2,9 @@ module Lipids
 using Reexport, IterTools, MLStyle, Dates, Downloads, ZipArchives
 using ..MassSpecBioChemicals
 using MassSpecChemicals: 
-AbstractChemical, ChemicalAttribute, AbstractChemicalParser, 
-    tuplize, vectorize, buildattribute
+    AbstractChemical, ChemicalAttribute, AbstractChemicalParser, 
+    tuplize, vectorize, buildattribute,
+    safecopy, chemicalelements_equal, sort_unique_elements
 import MassSpecChemicals: 
     chemicalname, chemicalformula, chemicalelements, chemicalabbr, chemicalsmiles, 
     defaultchemicalkwargs, parse_chemical
@@ -21,7 +22,10 @@ import ..MassSpecBioChemicals:
         composition,
         chiralitize
 
-import Base: isless, getindex, length, size, eltype, getproperty, propertynames, setproperty!, keys, values, pairs
+import Base: isless, getindex, length, size, eltype, 
+        getproperty, propertynames, setproperty!, 
+        keys, values, pairs,
+        ==, hash, copy
 using ..MassSpecBioChemicals: 
         lk, makechemical, 
         makelinkage, 
@@ -41,7 +45,7 @@ using ..MassSpecBioChemicals:
         ntotallinkage
 
 using ..MassSpecBioChemicals.Glycans: 
-        ap, α, β, parse_monosaccharide, parse_glycomp, parse_series_glycan, 
+        ap, α, β, MonosaccharideParser, SaccharideParser, SeriesGlycanParser, GlycompParser, 
         MONO_STRUCT, GLYCAN_STRUCT, generic_glycan
 using ..MassSpecBioChemicals.Proteins: parse_aa, parse_aa_fg, parse_aa3, letter3_abbr, PROTEIN_3LETTER_AA
 export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, SPB, AbstractSTRing, STRing, SRing, DSMSRing, DCRing, CASRing, BRSRing, EGSRing, DEGSRing, SISRing, STSRing,
@@ -66,7 +70,7 @@ export AbstractCarbonChain, CarbonChain, IsoprenoidChain, Acyl, Alkyl, Alkenyl, 
         Sterol, FreeSterol, Sterylester, SubstitutedSterol,
         Prenol, Retinylester, CoenzymeQ,
 
-        parse_lipid, chemicalsmiles_carbonchain, 
+        LipidParser, chemicalsmiles_carbonchain, 
 
         specieslevel, molecularspecieslevel, phosphatepositionlevel, snpositionlevel, 
         passphosphatepositionlevel, passsnpositionlevel, 
@@ -221,10 +225,13 @@ const DiradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}, <: Tupl
 # divrem 3
 const MonoDiradylChain = Union{<: MonoradylChain, <: DiradylChain}
 const HeadDiradylChain = Union{<: DiradylChain, <: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl}}}
-const TriradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl}}, <: Tuple{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}, <: CarbonChain{<: Radyl}}, <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}}}
-const TetraradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl, <: Radyl}}, <: Tuple{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl}}, <: CarbonChain{<: Radyl}}, 
+const TriradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl}}, 
+                            <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}}, 
+                            <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}}}
+const TetraradylChain = Union{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl, <: Radyl}}, 
+                            <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Tuple{<: Radyl, <: Radyl, <: Radyl}}}, 
                             <: Tuple{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}, <: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}}, 
-                            <: Tuple{<: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}}, 
+                            <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Tuple{<: Radyl, <: Radyl}}}, 
                             <: Tuple{<: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}, <: CarbonChain{<: Radyl}}}
 
 abstract type Glycerolipid{B, C} <: Lipid{B, C} end
